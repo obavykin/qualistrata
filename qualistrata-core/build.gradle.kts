@@ -1,0 +1,6 @@
+dependencies {
+    api(platform("com.fasterxml.jackson:jackson-bom:2.22.0"))
+
+    api("com.fasterxml.jackson.core:jackson-databind")
+    api("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml")
+}
