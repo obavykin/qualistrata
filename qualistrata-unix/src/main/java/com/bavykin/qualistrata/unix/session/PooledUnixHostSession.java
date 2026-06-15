@@ -14,11 +14,12 @@ import com.bavykin.qualistrata.unix.command.UnixCommandRequest;
  * after {@link #close()} is called, further command execution through this
  * wrapper is rejected.</p>
  */
-class PooledUnixHostSession implements UnixHostSession {
+class PooledUnixHostSession implements InvalidatableUnixHostSession  {
 
     private final UnixHostSession delegate;
     private final UnixHostSessionPool pool;
 
+    private boolean invalidated;
     private boolean closed;
 
     /**
@@ -64,18 +65,42 @@ class PooledUnixHostSession implements UnixHostSession {
      */
     @Override
     public boolean isOpen() {
-        return !closed && delegate.isOpen();
+        return !closed && !invalidated && delegate.isOpen();
+    }
+
+    /**
+     * Invalidates the borrowed session.
+     *
+     * <p>Invalidation is used when the borrowed session is broken or unsafe for
+     * reuse. The delegate is passed to the pool invalidation path and must not be
+     * returned to the idle session queue.</p>
+     *
+     * <p>The operation is idempotent from the consumer perspective. Calling
+     * invalidate more than once invalidates the delegate only once.</p>
+     */
+    @Override
+    public void invalidate() {
+        if (closed || invalidated) {
+            return;
+        }
+
+        invalidated = true;
+
+        pool.invalidate(delegate);
     }
 
     /**
      * Releases the borrowed session back to the pool.
      *
-     * <p>The operation is idempotent from the consumer perspective. Calling
-     * close more than once releases the delegate only once.</p>
+     * <p>The operation is idempotent from the consumer perspective. Calling close
+     * more than once releases the delegate only once.</p>
+     *
+     * <p>If the session was already invalidated, close does nothing because the
+     * delegate has already been removed from the reusable pool.</p>
      */
     @Override
     public void close() {
-        if (closed) {
+        if (closed || invalidated) {
             return;
         }
 
@@ -85,11 +110,15 @@ class PooledUnixHostSession implements UnixHostSession {
     }
 
     /**
-     * Ensures this wrapper has not been closed.
+     * Ensures this wrapper has not been closed or invalidated.
      */
     private void ensureOpen() {
         if (closed) {
             throw new UnixSessionException("Pooled Unix session is already closed.");
+        }
+
+        if (invalidated) {
+            throw new UnixSessionException("Pooled Unix session is already invalidated.");
         }
     }
 }

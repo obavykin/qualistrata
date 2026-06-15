@@ -10,11 +10,7 @@ import org.junit.jupiter.api.Test;
 import java.time.Duration;
 import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Unit tests for {@link PooledUnixSessionProvider}.
@@ -157,6 +153,84 @@ class PooledUnixSessionProviderTest {
         assertEquals(1, pool.closeCount());
     }
 
+    @Test
+    void shouldInvalidateSessionThroughPool() {
+        FakeUnixHostSession delegate = new FakeUnixHostSession();
+
+        RecordingUnixHostSessionPool pool = new RecordingUnixHostSessionPool(delegate);
+        PooledUnixSessionProvider provider = new PooledUnixSessionProvider(pool);
+
+        UnixHostSession session = provider.open(validRequest());
+
+        InvalidatableUnixHostSession invalidatableSession =
+                assertInstanceOf(InvalidatableUnixHostSession.class, session);
+
+        invalidatableSession.invalidate();
+
+        assertFalse(session.isOpen());
+        assertSame(delegate, pool.lastInvalidatedSession());
+        assertEquals(1, pool.invalidateCount());
+        assertEquals(0, pool.releaseCount());
+    }
+
+    @Test
+    void shouldInvalidateSessionOnlyOnceWhenInvalidatedMultipleTimes() {
+        FakeUnixHostSession delegate = new FakeUnixHostSession();
+
+        RecordingUnixHostSessionPool pool = new RecordingUnixHostSessionPool(delegate);
+        PooledUnixSessionProvider provider = new PooledUnixSessionProvider(pool);
+
+        UnixHostSession session = provider.open(validRequest());
+
+        InvalidatableUnixHostSession invalidatableSession =
+                assertInstanceOf(InvalidatableUnixHostSession.class, session);
+
+        invalidatableSession.invalidate();
+        invalidatableSession.invalidate();
+
+        assertEquals(1, pool.invalidateCount());
+    }
+
+    @Test
+    void shouldNotReleaseSessionAfterInvalidation() {
+        FakeUnixHostSession delegate = new FakeUnixHostSession();
+
+        RecordingUnixHostSessionPool pool = new RecordingUnixHostSessionPool(delegate);
+        PooledUnixSessionProvider provider = new PooledUnixSessionProvider(pool);
+
+        UnixHostSession session = provider.open(validRequest());
+
+        InvalidatableUnixHostSession invalidatableSession =
+                assertInstanceOf(InvalidatableUnixHostSession.class, session);
+
+        invalidatableSession.invalidate();
+        session.close();
+
+        assertEquals(1, pool.invalidateCount());
+        assertEquals(0, pool.releaseCount());
+    }
+
+    @Test
+    void shouldRejectCommandExecutionAfterInvalidation() {
+        PooledUnixSessionProvider provider = new PooledUnixSessionProvider(
+                new RecordingUnixHostSessionPool(new FakeUnixHostSession())
+        );
+
+        UnixHostSession session = provider.open(validRequest());
+
+        InvalidatableUnixHostSession invalidatableSession =
+                assertInstanceOf(InvalidatableUnixHostSession.class, session);
+
+        invalidatableSession.invalidate();
+
+        UnixSessionException exception = assertThrows(
+                UnixSessionException.class,
+                () -> session.execute(new UnixCommandRequest("hostname", Duration.ofSeconds(5)))
+        );
+
+        assertEquals("Pooled Unix session is already invalidated.", exception.getMessage());
+    }
+
     /**
      * Creates a valid Unix host session request.
      *
@@ -255,6 +329,20 @@ class PooledUnixSessionProviderTest {
         @Override
         public void close() {
             closeCount++;
+        }
+
+        /**
+         * @return last invalidated session.
+         */
+        private UnixHostSession lastInvalidatedSession() {
+            return lastInvalidatedSession;
+        }
+
+        /**
+         * @return number of invalidate calls.
+         */
+        private int invalidateCount() {
+            return invalidateCount;
         }
 
         /**

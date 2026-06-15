@@ -11,8 +11,7 @@ import org.junit.jupiter.api.Test;
 import java.time.Duration;
 import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Integration-style unit tests for {@link PooledUnixSessionProvider}.
@@ -107,6 +106,43 @@ class PooledUnixSessionProviderIntegrationTest {
 
         assertEquals(1, factory.openCount());
         assertEquals(1, factory.createdSession(0).closeCount());
+    }
+
+    @Test
+    void shouldCreateReplacementPhysicalSessionAfterInvalidation() {
+        RecordingUnixHostSessionFactory factory = new RecordingUnixHostSessionFactory();
+
+        SimpleUnixHostSessionPool pool = new SimpleUnixHostSessionPool(factory);
+        PooledUnixSessionProvider provider = new PooledUnixSessionProvider(pool);
+
+        UnixHostSessionRequest request = validRequest();
+
+        UnixHostSession firstSession = provider.open(request);
+
+        CommandResult firstResult = firstSession.execute(new UnixCommandRequest(
+                "hostname",
+                Duration.ofSeconds(5)
+        ));
+
+        assertEquals("session-1", firstResult.stdout());
+
+        InvalidatableUnixHostSession invalidatableSession =
+                assertInstanceOf(InvalidatableUnixHostSession.class, firstSession);
+
+        invalidatableSession.invalidate();
+
+        try (UnixHostSession secondSession = provider.open(request)) {
+            CommandResult secondResult = secondSession.execute(new UnixCommandRequest(
+                    "hostname",
+                    Duration.ofSeconds(5)
+            ));
+
+            assertEquals("session-2", secondResult.stdout());
+        }
+
+        assertEquals(2, factory.openCount());
+        assertEquals(1, factory.createdSession(0).closeCount());
+        assertEquals(1, factory.createdSession(1).executeCount());
     }
 
     /**
