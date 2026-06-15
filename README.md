@@ -37,6 +37,21 @@ The public repository intentionally contains only generic framework modules. Pro
 | `qualistrata-unix` | SSH/Unix automation utilities |
 | `qualistrata-perf` | Performance metrics and telemetry infrastructure |
 
+
+## Current core capabilities
+
+`qualistrata-core` currently provides:
+
+- generic target configuration model;
+- environment profile model;
+- Unix command/result DTOs;
+- framework exceptions;
+- YAML target configuration loading;
+- deep target configuration merging;
+- target selection from `-Dtarget`, `TARGET`, or explicit project default;
+- conventional target configuration path resolution;
+- resolved target configuration service.
+
 ## Design principles
 
 - Test at the lowest reliable layer
@@ -48,6 +63,10 @@ The public repository intentionally contains only generic framework modules. Pro
 - Keep product-specific logic outside the framework
 - Generate useful local artifacts
 - Keep metrics infrastructure optional and non-blocking by default
+
+## Documentation
+
+- [Target configuration](docs/configuration/target-configuration.md)
 
 ## Build
 

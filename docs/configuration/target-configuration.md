@@ -39,7 +39,7 @@ public target YAML
   = resolved runtime TargetConfig
 ```
 
-QualiStrata core provides generic models, loading, and merging primitives. The consuming project decides which layers exist, where they are stored, and how secrets are resolved.
+QualiStrata core provides generic models, loading, selection, path resolution, and merging primitives. The consuming project decides which layers exist, where they are stored, which defaults are allowed, and how secrets are resolved.
 
 ## Public Target Configuration
 
@@ -103,6 +103,124 @@ password = value resolved from a secure source
 ```
 
 This is why `UserConfig` may have a `password` field in the core model: it represents the effective user configuration after layers are merged. Real password values must come only from secure runtime layers and must not be stored in committed public target YAML files.
+
+## Core Resolution Pipeline
+
+`qualistrata-core` provides a generic target configuration resolution pipeline.
+
+The current core flow is:
+
+```text
+TargetSelector
+  -> TargetConfigPathResolver
+  -> TargetConfigLoader
+  -> TargetConfigMerger
+  -> TargetConfigResolver
+  -> ResolvedTarget
+```
+
+Each component has a narrow responsibility.
+
+| Component                  | Responsibility                                                                           |
+| -------------------------- | ---------------------------------------------------------------------------------------- |
+| `TargetSelector`           | Selects the active target name from runtime inputs.                                      |
+| `TargetConfigPathResolver` | Resolves conventional configuration paths for the selected target.                       |
+| `TargetConfigLoader`       | Loads a YAML file into `TargetConfig`.                                                   |
+| `TargetConfigMerger`       | Deep-merges target configuration layers.                                                 |
+| `TargetConfigResolver`     | Orchestrates selection, path resolution, loading, merging, and returns `ResolvedTarget`. |
+
+This separation avoids a monolithic configuration class and keeps the framework generic.
+
+## Target Selection
+
+The active target name may be selected from:
+
+1. JVM system property;
+2. environment variable;
+3. explicit project-level default.
+
+The generic priority is:
+
+```text
+-Dtarget=...
+TARGET=...
+explicit project default
+```
+
+`qualistrata-core` must not define product-specific fallback targets such as:
+
+```text
+release_6.6
+dev
+local
+staging
+```
+
+A consuming project may provide its own explicit default when calling the resolver, but that default belongs to the project, not to the reusable framework.
+
+Example:
+
+```text
+-Dtarget=demo
+```
+
+or:
+
+```text
+TARGET=demo
+```
+
+If no target can be selected and no explicit project default is provided, the core selector fails fast.
+
+## Conventional Configuration Paths
+
+The default path convention is:
+
+```text
+config/targets/<target>.yml
+config/secrets.yml
+config/secrets/<target>.yml
+explicit secrets file, when provided
+```
+
+For target `demo`, the conventional paths are:
+
+```text
+config/targets/demo.yml
+config/secrets.yml
+config/secrets/demo.yml
+```
+
+An explicit secrets file may also be provided by the consuming project.
+
+The path resolver only builds paths. It does not check whether files exist, does not load YAML, and does not merge configuration layers.
+
+## Resolving Target Configuration
+
+`TargetConfigResolver` combines the generic core primitives into one resolution flow.
+
+The resolver performs these steps:
+
+1. Selects the active target name.
+2. Resolves conventional configuration paths for the selected target.
+3. Loads the mandatory public target YAML.
+4. Loads optional default secrets if the file exists.
+5. Loads optional target-specific secrets if the file exists.
+6. Loads optional explicit secrets file if provided and present.
+7. Deep-merges all loaded layers into one effective `TargetConfig`.
+8. Returns `ResolvedTarget`.
+
+The public target file is mandatory.
+
+The following layers are optional:
+
+* `config/secrets.yml`;
+* `config/secrets/<target>.yml`;
+* explicit secrets file.
+
+Optional layers are skipped when they do not exist.
+
+The resolver does not own product-specific validation rules. A consuming project may validate the final `ResolvedTarget` after resolution.
 
 ## Merge Rules
 
@@ -250,6 +368,43 @@ config/secrets/<target>.yml
 ```
 
 These paths are examples only. QualiStrata core must not require a specific repository layout.
+
+## Example Resolution Result
+
+Given this public target layer:
+
+```yaml
+hosts:
+  app:
+    role: "application"
+    host: "app.demo.test"
+    port: 22
+    defaultUser: "app"
+    users:
+      app:
+        username: "app"
+        keyPath: "/home/app/.ssh/id_rsa"
+```
+
+and this local secrets layer:
+
+```yaml
+hosts:
+  app:
+    users:
+      app:
+        password: "<local-app-password>"
+```
+
+the resolved runtime user configuration becomes:
+
+```text
+hosts.app.users.app.username = app
+hosts.app.users.app.keyPath  = /home/app/.ssh/id_rsa
+hosts.app.users.app.password = <local-app-password>
+```
+
+The password exists only in the resolved runtime configuration and must not be committed in public target files.
 
 ## Sections
 
@@ -447,7 +602,7 @@ A consuming project may resolve secrets from:
 * Vault or another secret-management system;
 * project-specific credential providers.
 
-The core framework should provide reusable primitives for loading and merging configuration, but it must not assume a specific secret storage mechanism.
+The core framework provides reusable primitives for loading and merging configuration, but it must not assume a specific secret storage mechanism.
 
 ## Public Repository Rules
 
@@ -503,6 +658,67 @@ It does not:
 
 This separation allows consuming projects to build their own resolution pipeline while reusing generic merge behavior.
 
+## Selecting Target Configuration
+
+`qualistrata-core` provides a generic target selector.
+
+The selector can choose a target from:
+
+* JVM system property `target`;
+* environment variable `TARGET`;
+* explicit project-level default.
+
+Selection priority is:
+
+```text
+-Dtarget
+TARGET
+project default
+```
+
+Blank values are ignored.
+
+The selector does not define framework-level defaults. Defaults belong to consuming projects.
+
+## Resolving Configuration Paths
+
+`qualistrata-core` provides a generic path resolver.
+
+The path resolver follows this convention:
+
+```text
+config/targets/<target>.yml
+config/secrets.yml
+config/secrets/<target>.yml
+```
+
+It may also include an explicit secrets file supplied by the consuming project.
+
+The path resolver does not load files and does not validate whether files exist. It only builds predictable paths.
+
+## Resolving Effective Target Configuration
+
+`qualistrata-core` provides a generic target configuration resolver.
+
+The resolver orchestrates the existing core primitives and returns a `ResolvedTarget`.
+
+It does:
+
+* select the active target;
+* resolve conventional paths;
+* load the mandatory public target configuration;
+* load optional secrets layers when they exist;
+* merge all loaded layers;
+* return resolved runtime configuration.
+
+It does not:
+
+* hardcode a default target;
+* know product-specific environment names;
+* validate product-specific required fields;
+* own secret storage;
+* create project-specific clients or sessions.
+
 ## Recommended Project Layout
 
 A project that uses QualiStrata may choose a layout like this:
@@ -555,8 +771,11 @@ Validation should be separated by responsibility:
 
 | Responsibility                   | Owner                                                   |
 | -------------------------------- | ------------------------------------------------------- |
+| Target selection                 | `qualistrata-core` or consuming project                 |
+| Configuration path resolution    | `qualistrata-core` or consuming project                 |
 | YAML parsing                     | `qualistrata-core`                                      |
 | Generic in-memory merging        | `qualistrata-core`                                      |
+| Generic resolution orchestration | `qualistrata-core`                                      |
 | Generic structural validation    | `qualistrata-core` or generic validation utilities      |
 | Secret source selection          | consuming project                                       |
 | Secret value resolution          | consuming project or dedicated secret provider          |
@@ -592,6 +811,10 @@ Target configuration describes the environment, not business test data.
 
 Public examples must use safe placeholder values only.
 
+### Treating path conventions as mandatory project structure
+
+The default path convention is reusable, but consuming projects may provide their own resolution strategy if needed.
+
 ## Summary
 
 Target configuration is the generic description of the environment under test.
@@ -603,6 +826,7 @@ It should be:
 * safe to commit when using placeholders;
 * free from product-specific assumptions;
 * separated from secrets;
+* deeply mergeable;
 * resolved by project-specific code before test execution.
 
-QualiStrata core provides generic model, loading, and merging capabilities. Consuming projects decide how targets are selected, how secrets are resolved, and how product-specific validation is performed.
+QualiStrata core provides generic model, selection, path resolution, loading, merging, and resolution capabilities. Consuming projects decide how targets are selected in their own context, how secrets are resolved, and how product-specific validation is performed.

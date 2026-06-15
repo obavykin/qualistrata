@@ -18,3 +18,9 @@ The project follows a simple chronological changelog format during early develop
     - `qualistrata-perf`
 - Initial project README.
 - Apache License 2.0.
+- - Generic target configuration loader.
+- Deep target configuration merger.
+- Target selection model.
+- Target configuration path resolver.
+- Resolved target configuration service.
+- Unit tests for core configuration pipeline.
