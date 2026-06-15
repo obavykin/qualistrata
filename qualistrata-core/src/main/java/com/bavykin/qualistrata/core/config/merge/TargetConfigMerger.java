@@ -32,6 +32,15 @@ import java.util.Map;
 public class TargetConfigMerger {
 
     /**
+     * Creates a target configuration merger.
+     *
+     * <p>The merger is stateless. A single instance can be reused across
+     * multiple configuration resolution operations.</p>
+     */
+    public TargetConfigMerger() {
+    }
+
+    /**
      * Merges a base target configuration with an override target configuration.
      *
      * <p>The returned configuration represents the effective target state after
