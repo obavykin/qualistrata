@@ -1,12 +1,9 @@
 package com.bavykin.qualistrata.unix.session.pool;
 
 import com.bavykin.qualistrata.core.config.model.UnixPoolConfig;
-import com.bavykin.qualistrata.unix.session.UnixHostSession;
-import com.bavykin.qualistrata.unix.session.UnixHostSessionFactory;
-import com.bavykin.qualistrata.unix.session.UnixHostSessionPool;
-import com.bavykin.qualistrata.unix.session.UnixHostSessionRequest;
-import com.bavykin.qualistrata.unix.session.UnixHostSessionRequestValidator;
-import com.bavykin.qualistrata.unix.session.UnixSessionException;
+import com.bavykin.qualistrata.unix.session.*;
+import com.bavykin.qualistrata.unix.session.health.OpenUnixSessionHealthCheck;
+import com.bavykin.qualistrata.unix.session.health.UnixSessionHealthCheck;
 
 import java.time.Duration;
 import java.util.ArrayDeque;
@@ -39,6 +36,8 @@ public class SimpleUnixHostSessionPool implements UnixHostSessionPool {
     private final Map<UnixSessionPoolKey, Queue<UnixHostSession>> idleSessions = new HashMap<>();
     private final Map<UnixSessionPoolKey, Integer> totalSessions = new HashMap<>();
 
+    private final UnixSessionHealthCheck healthCheck;
+
     private boolean closed;
 
     /**
@@ -47,7 +46,11 @@ public class SimpleUnixHostSessionPool implements UnixHostSessionPool {
      * @param sessionFactory factory used to create new physical sessions.
      */
     public SimpleUnixHostSessionPool(UnixHostSessionFactory sessionFactory) {
-        this(sessionFactory, new UnixHostSessionRequestValidator());
+        this(
+                sessionFactory,
+                new UnixHostSessionRequestValidator(),
+                new OpenUnixSessionHealthCheck()
+        );
     }
 
     /**
@@ -56,10 +59,12 @@ public class SimpleUnixHostSessionPool implements UnixHostSessionPool {
      *
      * @param sessionFactory factory used to create new physical sessions.
      * @param requestValidator validator used before borrowing sessions.
+     * @param healthCheck health check used before reusing idle sessions.
      */
     SimpleUnixHostSessionPool(
             UnixHostSessionFactory sessionFactory,
-            UnixHostSessionRequestValidator requestValidator
+            UnixHostSessionRequestValidator requestValidator,
+            UnixSessionHealthCheck healthCheck
     ) {
         if (sessionFactory == null) {
             throw new UnixSessionException("Unix host session factory must not be null.");
@@ -69,8 +74,13 @@ public class SimpleUnixHostSessionPool implements UnixHostSessionPool {
             throw new UnixSessionException("Unix host session request validator must not be null.");
         }
 
+        if (healthCheck == null) {
+            throw new UnixSessionException("Unix session health check must not be null.");
+        }
+
         this.sessionFactory = sessionFactory;
         this.requestValidator = requestValidator;
+        this.healthCheck = healthCheck;
     }
 
     /**
@@ -214,10 +224,11 @@ public class SimpleUnixHostSessionPool implements UnixHostSessionPool {
             UnixHostSession session = queue.poll();
             PooledSessionHandle handle = requirePoolHandle(session);
 
-            if (handle.session().isOpen()) {
+            if (healthCheck.isHealthy(handle.session())) {
                 return handle;
             }
 
+            closeQuietly(handle.session());
             decrementTotal(key);
         }
 

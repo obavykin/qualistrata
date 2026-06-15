@@ -13,10 +13,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Unit tests for {@link SimpleUnixHostSessionPool}.
@@ -154,6 +151,27 @@ class SimpleUnixHostSessionPoolTest {
         );
 
         assertEquals("Unix session pool is already closed.", exception.getMessage());
+    }
+
+    @Test
+    void shouldDiscardUnhealthyIdleSessionAndCreateReplacement() {
+        RecordingUnixHostSessionFactory factory = new RecordingUnixHostSessionFactory();
+
+        SimpleUnixHostSessionPool pool = new SimpleUnixHostSessionPool(
+                factory,
+                new com.bavykin.qualistrata.unix.session.UnixHostSessionRequestValidator(),
+                session -> false
+        );
+
+        UnixHostSession first = pool.borrow(validRequest());
+
+        pool.release(first);
+
+        UnixHostSession second = pool.borrow(validRequest());
+
+        assertEquals(2, factory.openCount());
+        assertNotSame(first, second);
+        assertEquals(1, factory.createdSession(0).closeCount());
     }
 
     /**
