@@ -51,7 +51,8 @@ The public repository intentionally contains only generic framework modules. Pro
 - target selection from `-Dtarget`, `TARGET`, or explicit project default;
 - conventional target configuration path resolution;
 - resolved target configuration service;
-- generic structural validation for resolved target configuration.
+- generic structural validation for resolved target configuration;
+- public configuration facade for resolving and validating target configuration.
 
 ## Design principles
 
@@ -68,6 +69,32 @@ The public repository intentionally contains only generic framework modules. Pro
 ## Documentation
 
 - [Target configuration](docs/configuration/target-configuration.md)
+
+
+## Basic configuration usage
+
+Consuming projects can resolve and validate target configuration through the core facade:
+
+```java
+import com.bavykin.qualistrata.core.config.QualiStrataConfig;
+import com.bavykin.qualistrata.core.config.model.ResolvedTarget;
+import com.bavykin.qualistrata.core.config.resolution.TargetConfigResolutionRequest;
+
+import java.nio.file.Path;
+
+QualiStrataConfig config = new QualiStrataConfig();
+
+ResolvedTarget target = config.resolveTarget(new TargetConfigResolutionRequest(
+        Path.of("."),
+        System.getProperties(),
+        System.getenv(),
+        null,
+        null
+));
+```
+The facade resolves configuration layers, applies generic structural validation, and returns a validated `ResolvedTarget`.
+
+Project-specific validation, credential checks, connectivity checks, and client/session creation should be implemented outside `qualistrata-core`.
 
 ## Build
 
