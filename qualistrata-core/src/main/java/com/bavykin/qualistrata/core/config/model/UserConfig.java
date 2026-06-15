@@ -1,22 +1,22 @@
 package com.bavykin.qualistrata.core.config.model;
 
 /**
- * Generic user configuration for a target host or service.
+ * Resolved generic user configuration for a target host or service.
  *
- * <p>This record describes a logical user account that can be referenced by
- * framework modules or project-specific integrations. It supports both
- * password-based and key-based authentication because different environments
- * may use different access models.</p>
+ * <p>This record represents user configuration after open target settings and
+ * optional secret values have been combined. Open values such as username or
+ * key path may come from a committed target YAML file, while sensitive values
+ * such as passwords must come from system properties, local secret files,
+ * environment variables, CI/CD secret storage, or another dedicated secrets
+ * mechanism.</p>
  *
- * <p>Configuration files committed to source control must not contain real
- * passwords, private keys, tokens, or other sensitive values. Real secrets
- * should be provided through local secret files, CI/CD secret storage,
- * environment variables, or another dedicated secrets mechanism.</p>
+ * <p>Real passwords must not be committed to the repository or stored in public
+ * target configuration examples.</p>
  *
  * @param username login name used for the target user.
- * @param password optional password value or placeholder resolved from a
- *                 secrets mechanism. Real passwords must not be committed to
- *                 the repository.
+ * @param password optional resolved password value. The value must come from a
+ *                 secrets mechanism and must not be stored in committed target
+ *                 configuration files.
  * @param keyPath optional path to a private key file used for key-based
  *                authentication. The key file itself must remain outside the
  *                repository.
