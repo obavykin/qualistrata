@@ -201,13 +201,13 @@ The intended meaning is:
 A healthy session should be released:
 
 ```text
-borrow -> use -> release
+borrow -> use -> close -> release
 ```
 
 A broken session should be invalidated:
 
 ```text
-borrow -> failure -> invalidate
+borrow -> failure -> invalidate -> close physical session -> remove from pool -> replacement on next borrow
 ```
 
 Broken sessions must not be returned to the reusable pool.
@@ -222,6 +222,47 @@ Examples of situations where a session may need invalidation:
 * command execution fails due to infrastructure-level session problem.
 
 Normal non-zero command exit codes do not automatically mean the session is broken.
+
+## Invalidatable Sessions
+
+Invalidation is modeled as an optional session capability.
+
+The base `UnixHostSession` contract defines only common session operations:
+
+```text
+execute
+isOpen
+close
+```
+
+Pool-aware sessions that support explicit invalidation may implement `InvalidatableUnixHostSession`.
+
+This keeps the base session abstraction simple and avoids forcing every session implementation to support pooling-specific lifecycle operations.
+
+Consumer code may use invalidation when it detects an infrastructure-level session problem:
+
+```java
+if (session instanceof InvalidatableUnixHostSession invalidatableSession) {
+    invalidatableSession.invalidate();
+}
+```
+
+For pooled sessions:
+
+```text
+close()
+  -> releases a healthy borrowed session back to the pool
+
+invalidate()
+  -> removes a broken borrowed session from the pool
+  -> closes the physical session
+  -> allows a replacement session to be created on the next borrow
+```
+
+Invalidation must be idempotent from the consumer perspective. Calling `invalidate()` multiple times must not invalidate the same physical session more than once.
+
+Calling `close()` after `invalidate()` must not return the invalidated session to the pool.
+
 
 ## Pool Configuration
 

@@ -26,4 +26,6 @@ The project follows a simple chronological changelog format during early develop
 - Unit tests for core configuration pipeline.
 - Generic structural validator for resolved target configuration;
 - Public configuration facade for resolving and validating target configuration;
-- Unix session and pooling architecture documentation.
+- Unix session and pooling architecture documentation;
+- Pooled Unix session invalidation support.
+- Documentation for pooled Unix session invalidation lifecycle.
