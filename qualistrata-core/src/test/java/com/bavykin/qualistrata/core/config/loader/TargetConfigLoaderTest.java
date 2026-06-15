@@ -29,17 +29,14 @@ class TargetConfigLoaderTest {
 
         Files.writeString(configFile, """
                 env: demo
-                                
                 ui:
                   baseUrl: "https://app.demo.test"
-                                
                 db:
                   host: "db.demo.test"
                   port: 1521
                   sid: "DEMO"
                   service:
                   username: "demo_user"
-                                
                 api: {}
                 perf: {}
                 hosts: {}

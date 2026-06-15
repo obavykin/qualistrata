@@ -196,6 +196,28 @@ The intended meaning is:
 | `invalidate` | Remove a broken or unsafe session from reuse.        |
 | `close`      | Close the pool and release all underlying resources. |
 
+## Session Health Checks
+
+Pooled sessions should be checked before reuse.
+
+A session may still exist as an object but no longer be safe to reuse because the remote host closed the connection, authentication state expired, or the underlying transport became broken.
+
+QualiStrata models this with `UnixSessionHealthCheck`.
+
+The default implementation is `OpenUnixSessionHealthCheck`, which treats a session as healthy when it is non-null and open.
+
+The simple pool uses the health check before returning an idle session:
+
+```text
+borrow idle session
+  -> check health
+  -> if healthy: reuse
+  -> if unhealthy: close, remove from pool accounting, create replacement when possible
+```
+Future SSH-specific implementations may provide protocol-level health checks.
+
+Health checks should not treat normal non-zero command exit codes as session failures.
+
 ## Release vs Invalidate
 
 A healthy session should be released:

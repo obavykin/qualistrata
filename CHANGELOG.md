@@ -28,4 +28,5 @@ The project follows a simple chronological changelog format during early develop
 - Public configuration facade for resolving and validating target configuration;
 - Unix session and pooling architecture documentation;
 - Pooled Unix session invalidation support.
-- Documentation for pooled Unix session invalidation lifecycle.
+- Documentation for pooled Unix session invalidation lifecycle;
+- Generic Unix session health check contract and default open-session implementation.
