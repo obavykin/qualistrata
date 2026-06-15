@@ -69,6 +69,7 @@ The public repository intentionally contains only generic framework modules. Pro
 ## Documentation
 
 - [Target configuration](docs/configuration/target-configuration.md)
+- [Unix session and pooling architecture](docs/unix/session-and-pooling.md)
 
 
 ## Basic configuration usage

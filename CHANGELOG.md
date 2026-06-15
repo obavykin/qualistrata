@@ -25,4 +25,5 @@ The project follows a simple chronological changelog format during early develop
 - Resolved target configuration service.
 - Unit tests for core configuration pipeline.
 - Generic structural validator for resolved target configuration;
-- Public configuration facade for resolving and validating target configuration.
+- Public configuration facade for resolving and validating target configuration;
+- Unix session and pooling architecture documentation.
