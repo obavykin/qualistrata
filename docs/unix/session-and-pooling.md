@@ -218,6 +218,35 @@ Future SSH-specific implementations may provide protocol-level health checks.
 
 Health checks should not treat normal non-zero command exit codes as session failures.
 
+## SSH Connection Abstraction
+
+QualiStrata separates Unix session lifecycle from the concrete SSH library.
+
+The SSH abstraction layer contains:
+
+- `SshConnectionRequest`;
+- `SshConnection`;
+- `SshConnectionFactory`;
+- `SshConnectionException`;
+- `SshUnixHostSession`;
+- `SshUnixHostSessionFactory`.
+
+The intended chain is:
+
+```text
+UnixSessionProvider
+  -> DirectUnixSessionProvider or PooledUnixSessionProvider
+  -> UnixHostSessionFactory
+  -> SshUnixHostSessionFactory
+  -> SshConnectionFactory
+  -> concrete SSH implementation
+```
+`SshUnixHostSessionFactory` converts generic `HostConfig` and `UserConfig` into `SshConnectionRequest`.
+
+The concrete SSH implementation is intentionally hidden behind `SshConnectionFactory`.
+
+This allows the framework to support JSch, Apache MINA SSHD, SSHJ, or another SSH transport library later without changing the higher-level Unix session contracts.
+
 ## Release vs Invalidate
 
 A healthy session should be released:

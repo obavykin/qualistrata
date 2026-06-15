@@ -29,4 +29,5 @@ The project follows a simple chronological changelog format during early develop
 - Unix session and pooling architecture documentation;
 - Pooled Unix session invalidation support.
 - Documentation for pooled Unix session invalidation lifecycle;
-- Generic Unix session health check contract and default open-session implementation.
+- Generic Unix session health check contract and default open-session implementation;
+- SSH connection abstraction and SSH-backed Unix host session factory.
