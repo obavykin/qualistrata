@@ -30,4 +30,6 @@ The project follows a simple chronological changelog format during early develop
 - Pooled Unix session invalidation support.
 - Documentation for pooled Unix session invalidation lifecycle;
 - Generic Unix session health check contract and default open-session implementation;
-- SSH connection abstraction and SSH-backed Unix host session factory.
+- SSH connection abstraction and SSH-backed Unix host session factory;
+- JSch-based SSH connection implementation.
+- Documentation for JSch SSH transport implementation.

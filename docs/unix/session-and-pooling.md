@@ -358,6 +358,46 @@ Concrete Unix implementations should:
 * close all physical resources when the provider or pool is closed;
 * provide clear diagnostics for connection and session failures.
 
+## JSch SSH Implementation
+
+QualiStrata provides a JSch-based SSH transport implementation using the maintained `com.github.mwiede:jsch` fork.
+
+The implementation includes:
+
+* `JschSshConnectionFactory`;
+* `JschSshConnection`.
+
+The implementation is hidden behind the generic SSH abstraction:
+
+```text
+SshConnectionFactory
+  -> JschSshConnectionFactory
+
+SshConnection
+  -> JschSshConnection
+```
+
+Higher-level Unix session code should still depend on generic contracts:
+
+```text
+UnixSessionProvider
+UnixHostSessionFactory
+SshConnectionFactory
+```
+
+and not directly on JSch classes.
+
+`JschSshConnectionFactory` opens connected SSH sessions from `SshConnectionRequest`.
+
+`JschSshConnection` executes commands through JSch exec channels and returns `CommandResult`.
+
+A non-zero command exit code is returned as a normal command result.
+
+Transport-level failures are reported as `SshConnectionException`.
+
+Regular unit tests do not open real SSH connections. Real SSH connectivity tests must be implemented as explicit integration tests with external infrastructure configuration.
+
+
 ## Current Status
 
 The current implementation includes:
