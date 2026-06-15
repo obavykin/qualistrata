@@ -222,6 +222,42 @@ Optional layers are skipped when they do not exist.
 
 The resolver does not own product-specific validation rules. A consuming project may validate the final `ResolvedTarget` after resolution.
 
+## Generic Configuration Validation
+
+`qualistrata-core` provides generic structural validation for resolved target configuration.
+
+The validator checks reusable framework-level rules only. It does not decide which product-specific sections are mandatory and does not validate whether external systems are reachable.
+
+Generic validation currently checks:
+
+- resolved target name is not blank;
+- target environment name is not blank;
+- UI base URL is not blank when the UI section is configured;
+- database port is positive when configured;
+- host aliases are not blank;
+- host address is not blank when a host is defined;
+- host port is positive when configured;
+- default user points to an existing user when users are defined;
+- user aliases are not blank;
+- username is not blank when a user is defined;
+- Unix pool size is positive when configured;
+- Unix pool keep-alive seconds is non-negative when configured;
+- Unix pool borrow timeout seconds is positive when configured;
+- command timeout is positive when configured.
+
+The validator intentionally does not check:
+
+- whether UI configuration is mandatory;
+- whether DB configuration is mandatory;
+- whether a specific host alias such as `app` or `db` must exist;
+- whether Oracle SID or service name is mandatory;
+- whether credentials are complete;
+- whether passwords or key files are valid;
+- whether hosts are reachable;
+- whether the target environment name is allowed by a specific project.
+
+Those rules belong to consuming projects or project-specific integration modules.
+
 ## Merge Rules
 
 QualiStrata uses deterministic deep merge rules for target configuration.

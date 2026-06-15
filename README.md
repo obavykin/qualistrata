@@ -50,7 +50,8 @@ The public repository intentionally contains only generic framework modules. Pro
 - deep target configuration merging;
 - target selection from `-Dtarget`, `TARGET`, or explicit project default;
 - conventional target configuration path resolution;
-- resolved target configuration service.
+- resolved target configuration service;
+- generic structural validation for resolved target configuration.
 
 ## Design principles
 
