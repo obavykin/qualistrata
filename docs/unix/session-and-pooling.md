@@ -264,6 +264,70 @@ try (UnixFacade unix = UnixFacade.pooled(targetConfig)) {
     );
 }
 ```
+### Convenience Command Execution Overloads
+
+`UnixFacade` provides convenience overloads for simple one-shot command execution.
+
+Instead of manually creating `UnixCommandRequest`, consumers may pass a command string directly.
+
+Execute a command on a host using the host default user and no explicit timeout:
+
+```java
+TargetConfig targetConfig = QualiStrataConfig.resolve();
+
+try (UnixFacade unix = UnixFacade.pooled(targetConfig)) {
+    CommandResult result = unix.execute("app", "hostname");
+}
+```
+
+Execute a command on a host using the host default user and an explicit timeout:
+
+```java
+TargetConfig targetConfig = QualiStrataConfig.resolve();
+
+try (UnixFacade unix = UnixFacade.pooled(targetConfig)) {
+    CommandResult result = unix.execute(
+            "app",
+            "hostname",
+            Duration.ofSeconds(5)
+    );
+}
+```
+
+Execute a command on a host using an explicit user alias and no explicit timeout:
+
+```java
+TargetConfig targetConfig = QualiStrataConfig.resolve();
+
+try (UnixFacade unix = UnixFacade.pooled(targetConfig)) {
+    CommandResult result = unix.execute(
+            "app",
+            "oracle",
+            "whoami"
+    );
+}
+```
+
+Execute a command on a host using an explicit user alias and an explicit timeout:
+
+```java
+TargetConfig targetConfig = QualiStrataConfig.resolve();
+
+try (UnixFacade unix = UnixFacade.pooled(targetConfig)) {
+    CommandResult result = unix.execute(
+            "app",
+            "oracle",
+            "whoami",
+            Duration.ofSeconds(5)
+    );
+}
+```
+
+These overloads are thin wrappers around the main `UnixCommandRequest`-based execution methods.
+
+They are intended for common simple commands.
+
+Use explicit `UnixCommandRequest` when command construction, timeout handling, or future command-level options need to be represented directly.
 
 ### Custom Facade Construction
 

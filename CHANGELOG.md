@@ -40,3 +40,4 @@ The project follows a simple chronological changelog format during early develop
 - Documentation for Unix host session request factory usage;
 - Documentation for high-level Unix facade usage;
 - Convenience command execution overloads in `UnixFacade`;
+- Documentation for `UnixFacade` convenience command execution overloads.
