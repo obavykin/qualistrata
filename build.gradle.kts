@@ -65,6 +65,23 @@ subprojects {
         shouldRunAfter(tasks.named("test"))
 
         useJUnitPlatform()
+
+        /*
+         * Forwards only QualiStrata integration-test system properties from the
+         * Gradle process to the forked test JVM.
+         *
+         * This keeps infrastructure-dependent integration tests configurable from
+         * the command line, for example:
+         *
+         * -Dqualistrata.integration.ssh.host=...
+         * -Dqualistrata.integration.ssh.username=...
+         */
+        systemProperties(
+            System.getProperties()
+                .stringPropertyNames()
+                .filter { it.startsWith("qualistrata.integration.") }
+                .associateWith { System.getProperty(it) }
+        )
     }
 
     tasks.withType<Test>().configureEach {
