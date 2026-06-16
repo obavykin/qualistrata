@@ -520,6 +520,72 @@ For pooled providers, closing a borrowed `UnixHostSession` returns the physical 
 
 Closing the provider closes the underlying pool and all idle physical sessions.
 
+## Unix Host Session Request Factory
+
+QualiStrata provides `UnixHostSessionRequestFactory` for creating `UnixHostSessionRequest` instances from resolved target configuration.
+
+This factory hides host lookup logic from consuming projects.
+
+Instead of manually extracting `HostConfig` from `TargetConfig.hosts()` and creating the request by hand, consumers can create requests by logical host alias.
+
+### Basic Usage
+
+```java
+TargetConfig targetConfig = QualiStrataConfig.resolve();
+
+UnixHostSessionRequestFactory requestFactory = new UnixHostSessionRequestFactory(targetConfig);
+
+UnixHostSessionRequest request = requestFactory.create("app");
+```
+
+This creates a request for the `app` host and uses the host default user.
+
+The factory expects that `TargetConfig` is already resolved and merged. It does not load files, merge secrets, or perform project-specific validation.
+
+### Explicit User Alias
+
+A consumer may explicitly select a user alias configured under the host:
+
+```java
+UnixHostSessionRequest request = requestFactory.create("app", "oracle");
+```
+
+When the user alias is not provided, blank, or `null`, the request uses the host default user.
+
+### Full Provider Flow
+
+A typical consumer flow is:
+
+```java
+TargetConfig targetConfig = QualiStrataConfig.resolve();
+
+UnixHostSessionRequestFactory requestFactory = new UnixHostSessionRequestFactory(targetConfig);
+UnixSessionProviderFactory providerFactory = new UnixSessionProviderFactory();
+
+UnixHostSessionRequest request = requestFactory.create("app");
+
+try (UnixSessionProvider provider = providerFactory.createPooled();
+     UnixHostSession session = provider.open(request)) {
+
+    CommandResult result = session.execute(new UnixCommandRequest(
+            "hostname",
+            Duration.ofSeconds(5)
+    ));
+}
+```
+
+### Error Handling
+
+`UnixHostSessionRequestFactory` fails fast with `UnixSessionException` when:
+
+- target configuration is `null`;
+- host alias is `null` or blank;
+- target configuration does not contain Unix hosts;
+- requested host alias is not configured.
+
+User alias validation is intentionally delegated to `UnixHostSessionRequest` and the existing Unix session request validation layer.
+
+This keeps the request factory focused on target host lookup, while session validation remains centralized in the Unix session layer.
 
 ## SSH Integration Test Configuration
 
