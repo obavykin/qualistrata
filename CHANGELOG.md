@@ -36,3 +36,4 @@ The project follows a simple chronological changelog format during early develop
 - Integration-test source set for infrastructure-dependent tests;
 - Documentation for guarded SSH integration-test configuration;
 - Documentation for Unix session provider factory usage;
+- Unix host session request factory for creating session requests from resolved target configuration;
