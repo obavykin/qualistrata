@@ -141,6 +141,79 @@ class UnixFacadeTest {
         assertTrue(provider.closed());
     }
 
+    @Test
+    void shouldExecuteCommandStringUsingDefaultUserWithoutExplicitTimeout() {
+        RecordingUnixSessionProvider provider = new RecordingUnixSessionProvider();
+        UnixFacade facade = testFacade(provider);
+
+        CommandResult result = facade.execute("app", "hostname");
+
+        assertEquals(0, result.exitCode());
+        assertEquals("app:app:hostname", result.stdout());
+        assertEquals("", result.stderr());
+        assertTrue(provider.lastSession().closed());
+
+        facade.close();
+    }
+
+    @Test
+    void shouldExecuteCommandStringUsingDefaultUserWithExplicitTimeout() {
+        RecordingUnixSessionProvider provider = new RecordingUnixSessionProvider();
+        UnixFacade facade = testFacade(provider);
+
+        CommandResult result = facade.execute(
+                "app",
+                "hostname",
+                Duration.ofSeconds(5)
+        );
+
+        assertEquals(0, result.exitCode());
+        assertEquals("app:app:hostname", result.stdout());
+        assertEquals("", result.stderr());
+        assertTrue(provider.lastSession().closed());
+
+        facade.close();
+    }
+
+    @Test
+    void shouldExecuteCommandStringUsingExplicitUserWithoutExplicitTimeout() {
+        RecordingUnixSessionProvider provider = new RecordingUnixSessionProvider();
+        UnixFacade facade = testFacade(provider);
+
+        CommandResult result = facade.execute(
+                "app",
+                "oracle",
+                "whoami"
+        );
+
+        assertEquals(0, result.exitCode());
+        assertEquals("app:oracle:whoami", result.stdout());
+        assertEquals("", result.stderr());
+        assertTrue(provider.lastSession().closed());
+
+        facade.close();
+    }
+
+    @Test
+    void shouldExecuteCommandStringUsingExplicitUserWithExplicitTimeout() {
+        RecordingUnixSessionProvider provider = new RecordingUnixSessionProvider();
+        UnixFacade facade = testFacade(provider);
+
+        CommandResult result = facade.execute(
+                "app",
+                "oracle",
+                "whoami",
+                Duration.ofSeconds(5)
+        );
+
+        assertEquals(0, result.exitCode());
+        assertEquals("app:oracle:whoami", result.stdout());
+        assertEquals("", result.stderr());
+        assertTrue(provider.lastSession().closed());
+
+        facade.close();
+    }
+
     /**
      * Creates a test facade backed by a recording provider.
      *

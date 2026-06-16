@@ -11,6 +11,8 @@ import com.bavykin.qualistrata.unix.session.factory.UnixSessionProviderFactory;
 import com.bavykin.qualistrata.unix.session.factory.UnixSessionProviderType;
 import com.bavykin.qualistrata.unix.session.request.UnixHostSessionRequestFactory;
 
+import java.time.Duration;
+
 /**
  * High-level facade for Unix session operations.
  *
@@ -111,6 +113,96 @@ public class UnixFacade implements AutoCloseable {
         UnixHostSessionRequest request = requestFactory.create(hostAlias, userAlias);
 
         return sessionProvider.open(request);
+    }
+
+    /**
+     * Executes a single command on the given host using the host default user and
+     * no explicit command timeout.
+     *
+     * <p>This is a convenience overload for simple commands. Internally it creates
+     * a {@link UnixCommandRequest} and delegates to the main execution method.</p>
+     *
+     * @param hostAlias logical host alias from target configuration.
+     * @param command command line to execute.
+     * @return command execution result.
+     */
+    public CommandResult execute(String hostAlias, String command) {
+        return execute(hostAlias, command, (Duration) null);
+    }
+
+    /**
+     * Executes a single command on the given host using the host default user and
+     * an explicit command timeout.
+     *
+     * <p>This is a convenience overload for simple commands. Internally it creates
+     * a {@link UnixCommandRequest} and delegates to the main execution method.</p>
+     *
+     * @param hostAlias logical host alias from target configuration.
+     * @param command command line to execute.
+     * @param timeout command timeout.
+     * @return command execution result.
+     */
+    public CommandResult execute(
+            String hostAlias,
+            String command,
+            Duration timeout
+    ) {
+        return execute(
+                hostAlias,
+                new UnixCommandRequest(
+                        command,
+                        timeout
+                )
+        );
+    }
+
+    /**
+     * Executes a single command on the given host using an explicit user alias and
+     * no explicit command timeout.
+     *
+     * <p>This is a convenience overload for simple commands. Internally it creates
+     * a {@link UnixCommandRequest} and delegates to the main execution method.</p>
+     *
+     * @param hostAlias logical host alias from target configuration.
+     * @param userAlias optional user alias.
+     * @param command command line to execute.
+     * @return command execution result.
+     */
+    public CommandResult execute(
+            String hostAlias,
+            String userAlias,
+            String command
+    ) {
+        return execute(hostAlias, userAlias, command, null);
+    }
+
+    /**
+     * Executes a single command on the given host using an explicit user alias and
+     * an explicit command timeout.
+     *
+     * <p>This is a convenience overload for simple commands. Internally it creates
+     * a {@link UnixCommandRequest} and delegates to the main execution method.</p>
+     *
+     * @param hostAlias logical host alias from target configuration.
+     * @param userAlias optional user alias.
+     * @param command command line to execute.
+     * @param timeout command timeout.
+     * @return command execution result.
+     */
+    public CommandResult execute(
+            String hostAlias,
+            String userAlias,
+            String command,
+            Duration timeout
+    ) {
+        return execute(
+                hostAlias,
+                userAlias,
+                new UnixCommandRequest(
+                        command,
+                        timeout
+                )
+        );
     }
 
     /**
