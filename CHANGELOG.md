@@ -47,3 +47,4 @@ The project follows a simple chronological changelog format during early develop
 - Environment check definition and runner for executing check suites and aggregating results;
 - Unix command environment check for reusable command-based readiness validation;
 - Documentation for Unix command environment checks and readiness suite usage;
+- Unix operating system environment check based on `/etc/os-release`;
