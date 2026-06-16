@@ -19,6 +19,13 @@ import java.util.Map;
 public class EnvironmentCheckRunner {
 
     /**
+     * Creates an environment check runner.
+     */
+    public EnvironmentCheckRunner() {
+        // Default runner has no configurable state.
+    }
+
+    /**
      * Runs the provided environment check definitions.
      *
      * @param suiteName human-readable suite name.
