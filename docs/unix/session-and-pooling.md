@@ -1,8 +1,8 @@
 # Unix Session and Pooling Architecture
 
-QualiStrata Unix module provides reusable contracts for command execution, Unix host sessions, and session pooling.
+QualiStrata Unix module provides reusable contracts and implementations for Unix command execution, Unix host sessions, SSH connectivity, and session pooling.
 
-The module is designed to support fast and reliable Unix automation without forcing test or project code to depend directly on SSH, JSch, connection pools, or any concrete implementation.
+The module is designed to support fast and reliable Unix automation without forcing test or project code to depend directly on SSH, JSch, connection pools, or any concrete transport implementation.
 
 ## Purpose
 
@@ -12,390 +12,359 @@ Opening a new SSH connection for every command is expensive because it may invol
 
 * network connection setup;
 * authentication;
-* remote shell or channel creation;
+* command channel creation;
 * command execution;
 * connection shutdown.
 
 For this reason, session reuse is a first-class architectural requirement in QualiStrata.
 
-## Design Principle
+## Design Principles
 
-Project and test code should depend on:
+Project and test code should prefer high-level QualiStrata Unix APIs and generic contracts.
+
+Recommended consumer-facing entry points are:
 
 ```text
+UnixFacade
 UnixSessionProvider
+UnixHostSession
 ```
 
-and not directly on:
+Project and test code should not depend directly on:
 
 ```text
-SSH client
 JSch
+SSH client implementation
+SshConnection
 UnixHostSessionFactory
 UnixHostSessionPool
 concrete pool implementation
 ```
 
-This keeps pooling transparent for consumers.
+This keeps SSH transport details and pooling behavior transparent for consumers.
 
-Example consumer usage:
-
-```java
-try (UnixHostSession session = sessionProvider.open(request)) {
-    CommandResult result = session.execute(commandRequest);
-}
-```
-
-The same consumer code can work with:
+The same consumer code should be able to work with:
 
 * direct non-pooled sessions;
 * pooled sessions;
 * local diagnostic sessions;
 * mock sessions in tests;
-* future SSH/JSch-based sessions.
+* current JSch-based SSH sessions;
+* future SSH or non-SSH implementations.
+
+## Recommended High-Level API
+
+For most consumers, `UnixFacade` is the recommended entry point.
+
+It allows opening Unix sessions and executing commands by logical host alias from resolved target configuration.
+
+```java
+TargetConfig targetConfig = QualiStrataConfig.resolve();
+
+try (UnixFacade unix = UnixFacade.pooled(targetConfig);
+     UnixHostSession session = unix.open("app")) {
+
+    CommandResult result = session.execute(new UnixCommandRequest(
+            "hostname",
+            Duration.ofSeconds(5)
+    ));
+}
+```
+
+The `app` value is a logical host alias from `TargetConfig.hosts()`.
+
+The facade resolves this alias to `HostConfig`, creates a `UnixHostSessionRequest`, opens a session through the configured provider, and keeps transport and pooling details hidden from the consumer.
 
 ## Architecture Overview
 
 The current Unix architecture is layered as follows:
 
 ```text
-UnixCommandRequest
-  -> describes command and timeout
+TargetConfig
+  -> resolved target configuration
 
-UnixCommandClient
-  -> low-level command execution contract
+UnixFacade
+  -> high-level consumer API
 
-LocalUnixCommandClient
-  -> local ProcessBuilder-based implementation
+UnixHostSessionRequestFactory
+  -> creates UnixHostSessionRequest from TargetConfig and host alias
 
-UnixHostSession
-  -> host/user-bound execution context
-
-UnixHostSessionFactory
-  -> creates new physical sessions
-
-UnixHostSessionPool
-  -> borrows, releases, and invalidates reusable sessions
+UnixSessionProviderFactory
+  -> creates direct or pooled UnixSessionProvider
 
 UnixSessionProvider
   -> consumer-facing session entry point
 
 DirectUnixSessionProvider
-  -> opens a new session for every request
+  -> opens a new physical session for every request
 
 PooledUnixSessionProvider
   -> borrows a session from the pool and returns it on close
-```
 
-## Command Execution Layer
+UnixHostSessionPool
+  -> borrows, releases, invalidates, and closes reusable sessions
 
-`UnixCommandClient` is the lowest-level command execution contract.
-
-It accepts a `UnixCommandRequest` and returns `CommandResult`.
-
-A non-zero exit code is a valid command result and must not automatically be treated as a framework exception.
-
-Framework-level exceptions should be reserved for cases such as:
-
-* invalid request;
-* infrastructure failure;
-* timeout;
-* interrupted execution;
-* connection failure;
-* inability to start or read command output.
-
-## Local Command Client
-
-`LocalUnixCommandClient` executes commands on the machine where tests are running.
-
-It is based on `ProcessBuilder`.
-
-It is useful for:
-
-* local diagnostics;
-* unit and integration tests;
-* validating command execution contracts;
-* reference behavior before SSH implementation is introduced.
-
-Although the module is called `qualistrata-unix`, the local client supports both Unix-like systems and Windows developer machines through a small shell adapter.
-
-## Host Session Layer
-
-`UnixHostSession` represents an open execution context bound to a specific host and user.
-
-A session may represent:
-
-* a physical SSH connection;
-* a pooled wrapper around a physical connection;
-* a local process execution context;
-* a mock session used in tests.
-
-Consumers should use try-with-resources:
-
-```java
-try (UnixHostSession session = sessionProvider.open(request)) {
-    session.execute(commandRequest);
-}
-```
-
-## Direct Session Provider
-
-`DirectUnixSessionProvider` opens a new physical session for every request.
-
-It delegates session creation to `UnixHostSessionFactory`.
-
-It does not use pooling.
-
-This provider is useful for:
-
-* diagnostics;
-* simple projects;
-* fallback mode;
-* tests;
-* troubleshooting scenarios where pool behavior should be excluded.
-
-## Pooled Session Provider
-
-`PooledUnixSessionProvider` borrows a session from `UnixHostSessionPool`.
-
-It returns a consumer-facing `UnixHostSession` wrapper.
-
-When the wrapper is closed, the borrowed session is released back to the pool.
-
-This means:
-
-```java
-session.close();
-```
-
-does not necessarily close the physical connection.
-
-For pooled sessions, `close()` means:
-
-```text
-return borrowed session to the pool
-```
-
-## Pool Lifecycle
-
-`UnixHostSessionPool` defines the reusable session lifecycle:
-
-```text
-borrow
-release
-invalidate
-close
-```
-
-The intended meaning is:
-
-| Operation    | Purpose                                              |
-| ------------ | ---------------------------------------------------- |
-| `borrow`     | Get a reusable session for a host/user request.      |
-| `release`    | Return a healthy session to the pool.                |
-| `invalidate` | Remove a broken or unsafe session from reuse.        |
-| `close`      | Close the pool and release all underlying resources. |
-
-## Session Health Checks
-
-Pooled sessions should be checked before reuse.
-
-A session may still exist as an object but no longer be safe to reuse because the remote host closed the connection, authentication state expired, or the underlying transport became broken.
-
-QualiStrata models this with `UnixSessionHealthCheck`.
-
-The default implementation is `OpenUnixSessionHealthCheck`, which treats a session as healthy when it is non-null and open.
-
-The simple pool uses the health check before returning an idle session:
-
-```text
-borrow idle session
-  -> check health
-  -> if healthy: reuse
-  -> if unhealthy: close, remove from pool accounting, create replacement when possible
-```
-Future SSH-specific implementations may provide protocol-level health checks.
-
-Health checks should not treat normal non-zero command exit codes as session failures.
-
-## SSH Connection Abstraction
-
-QualiStrata separates Unix session lifecycle from the concrete SSH library.
-
-The SSH abstraction layer contains:
-
-- `SshConnectionRequest`;
-- `SshConnection`;
-- `SshConnectionFactory`;
-- `SshConnectionException`;
-- `SshUnixHostSession`;
-- `SshUnixHostSessionFactory`.
-
-The intended chain is:
-
-```text
-UnixSessionProvider
-  -> DirectUnixSessionProvider or PooledUnixSessionProvider
-  -> UnixHostSessionFactory
-  -> SshUnixHostSessionFactory
-  -> SshConnectionFactory
-  -> concrete SSH implementation
-```
-`SshUnixHostSessionFactory` converts generic `HostConfig` and `UserConfig` into `SshConnectionRequest`.
-
-The concrete SSH implementation is intentionally hidden behind `SshConnectionFactory`.
-
-This allows the framework to support JSch, Apache MINA SSHD, SSHJ, or another SSH transport library later without changing the higher-level Unix session contracts.
-
-## Release vs Invalidate
-
-A healthy session should be released:
-
-```text
-borrow -> use -> close -> release
-```
-
-A broken session should be invalidated:
-
-```text
-borrow -> failure -> invalidate -> close physical session -> remove from pool -> replacement on next borrow
-```
-
-Broken sessions must not be returned to the reusable pool.
-
-Examples of situations where a session may need invalidation:
-
-* SSH connection is broken;
-* authentication state is invalid;
-* command channel cannot be opened;
-* session health check fails;
-* remote host closes the connection;
-* command execution fails due to infrastructure-level session problem.
-
-Normal non-zero command exit codes do not automatically mean the session is broken.
-
-## Invalidatable Sessions
-
-Invalidation is modeled as an optional session capability.
-
-The base `UnixHostSession` contract defines only common session operations:
-
-```text
-execute
-isOpen
-close
-```
-
-Pool-aware sessions that support explicit invalidation may implement `InvalidatableUnixHostSession`.
-
-This keeps the base session abstraction simple and avoids forcing every session implementation to support pooling-specific lifecycle operations.
-
-Consumer code may use invalidation when it detects an infrastructure-level session problem:
-
-```java
-if (session instanceof InvalidatableUnixHostSession invalidatableSession) {
-    invalidatableSession.invalidate();
-}
-```
-
-For pooled sessions:
-
-```text
-close()
-  -> releases a healthy borrowed session back to the pool
-
-invalidate()
-  -> removes a broken borrowed session from the pool
-  -> closes the physical session
-  -> allows a replacement session to be created on the next borrow
-```
-
-Invalidation must be idempotent from the consumer perspective. Calling `invalidate()` multiple times must not invalidate the same physical session more than once.
-
-Calling `close()` after `invalidate()` must not return the invalidated session to the pool.
-
-
-## Pool Configuration
-
-Pool settings come from `UnixPoolConfig` in target configuration.
-
-Current generic pool fields are:
-
-| Field                  | Purpose                                                        |
-| ---------------------- | -------------------------------------------------------------- |
-| `size`                 | Maximum number of reusable sessions.                           |
-| `keepAliveSeconds`     | Idle session keep-alive or validation interval.                |
-| `borrowTimeoutSeconds` | Maximum time to wait for a session when the pool is exhausted. |
-
-The exact behavior belongs to the concrete pool implementation.
-
-## Consumer Responsibility
-
-Consumers should:
-
-* depend on `UnixSessionProvider`;
-* use try-with-resources;
-* treat non-zero exit code as command result;
-* avoid managing SSH connections directly;
-* avoid manually opening and closing physical sessions unless implementing infrastructure code.
-
-Consumers should not:
-
-* depend directly on JSch or SSH implementation classes;
-* bypass `UnixSessionProvider` when pooling is expected;
-* return broken sessions to the pool;
-* assume that `session.close()` always physically closes the connection.
-
-## Implementation Responsibility
-
-Concrete Unix implementations should:
-
-* validate session requests before opening or borrowing sessions;
-* respect `UnixPoolConfig`;
-* keep pooling transparent for consumers;
-* return healthy sessions to the pool;
-* invalidate unsafe sessions;
-* close all physical resources when the provider or pool is closed;
-* provide clear diagnostics for connection and session failures.
-
-## JSch SSH Implementation
-
-QualiStrata provides a JSch-based SSH transport implementation using the maintained `com.github.mwiede:jsch` fork.
-
-The implementation includes:
-
-* `JschSshConnectionFactory`;
-* `JschSshConnection`.
-
-The implementation is hidden behind the generic SSH abstraction:
-
-```text
-SshConnectionFactory
-  -> JschSshConnectionFactory
-
-SshConnection
-  -> JschSshConnection
-```
-
-Higher-level Unix session code should still depend on generic contracts:
-
-```text
-UnixSessionProvider
 UnixHostSessionFactory
+  -> creates new physical sessions
+
+SshUnixHostSessionFactory
+  -> creates SSH-backed UnixHostSession instances
+
 SshConnectionFactory
+  -> creates low-level SSH connections
+
+JschSshConnectionFactory
+  -> JSch-based SSH implementation
 ```
 
-and not directly on JSch classes.
+Command execution is represented by:
 
-`JschSshConnectionFactory` opens connected SSH sessions from `SshConnectionRequest`.
+```text
+UnixCommandRequest
+  -> describes command and timeout
 
-`JschSshConnection` executes commands through JSch exec channels and returns `CommandResult`.
+UnixHostSession
+  -> host/user-bound command execution context
 
-A non-zero command exit code is returned as a normal command result.
+CommandResult
+  -> command exit code, stdout, and stderr
+```
 
-Transport-level failures are reported as `SshConnectionException`.
+## High-Level Unix Facade
 
-Regular unit tests do not open real SSH connections. Real SSH connectivity tests must be implemented as explicit integration tests with external infrastructure configuration.
+QualiStrata provides `UnixFacade` as the highest-level Unix API for consuming projects.
+
+The facade combines:
+
+* `UnixHostSessionRequestFactory`;
+* `UnixSessionProviderFactory`;
+* `UnixSessionProvider`;
+* `UnixHostSession`.
+
+This allows consumers to open Unix sessions and execute commands by logical host alias without manually creating `UnixHostSessionRequest` instances or assembling provider infrastructure.
+
+### Pooled Facade
+
+Use a pooled facade when physical Unix sessions should be reused.
+
+```java
+TargetConfig targetConfig = QualiStrataConfig.resolve();
+
+try (UnixFacade unix = UnixFacade.pooled(targetConfig);
+     UnixHostSession session = unix.open("app")) {
+
+    CommandResult result = session.execute(new UnixCommandRequest(
+            "hostname",
+            Duration.ofSeconds(5)
+    ));
+}
+```
+
+A pooled facade is usually preferred for repeated command execution against the same hosts.
+
+For pooled providers, closing a borrowed `UnixHostSession` returns the physical session to the pool.
+
+Closing the facade closes the underlying provider and provider-level resources.
+
+### Direct Facade
+
+Use a direct facade when every opened session should create a new physical Unix session.
+
+```java
+TargetConfig targetConfig = QualiStrataConfig.resolve();
+
+try (UnixFacade unix = UnixFacade.direct(targetConfig);
+     UnixHostSession session = unix.open("app")) {
+
+    CommandResult result = session.execute(new UnixCommandRequest(
+            "hostname",
+            Duration.ofSeconds(5)
+    ));
+}
+```
+
+A direct facade is simple and predictable, but it does not reuse physical SSH sessions.
+
+### Explicit Provider Type
+
+Consumers may create a facade with an explicit provider type:
+
+```java
+TargetConfig targetConfig = QualiStrataConfig.resolve();
+
+try (UnixFacade unix = UnixFacade.of(targetConfig, UnixSessionProviderType.POOLED);
+     UnixHostSession session = unix.open("app")) {
+
+    CommandResult result = session.execute(new UnixCommandRequest(
+            "hostname",
+            Duration.ofSeconds(5)
+    ));
+}
+```
+
+Supported provider types are:
+
+* `UnixSessionProviderType.DIRECT`;
+* `UnixSessionProviderType.POOLED`.
+
+### Explicit User Alias
+
+A session may be opened with an explicit user alias configured under the selected host:
+
+```java
+TargetConfig targetConfig = QualiStrataConfig.resolve();
+
+try (UnixFacade unix = UnixFacade.pooled(targetConfig);
+     UnixHostSession session = unix.open("app", "oracle")) {
+
+    CommandResult result = session.execute(new UnixCommandRequest(
+            "whoami",
+            Duration.ofSeconds(5)
+    ));
+}
+```
+
+When user alias is not provided, the host default user is used.
+
+### One-Shot Command Execution
+
+`UnixFacade` also supports one-shot command execution.
+
+The facade opens a session, executes the command, and closes the borrowed session automatically.
+
+```java
+TargetConfig targetConfig = QualiStrataConfig.resolve();
+
+try (UnixFacade unix = UnixFacade.pooled(targetConfig)) {
+    CommandResult result = unix.execute(
+            "app",
+            new UnixCommandRequest(
+                    "hostname",
+                    Duration.ofSeconds(5)
+            )
+    );
+}
+```
+
+For pooled providers, closing the borrowed session returns the physical session to the pool.
+
+One-shot execution with an explicit user alias:
+
+```java
+TargetConfig targetConfig = QualiStrataConfig.resolve();
+
+try (UnixFacade unix = UnixFacade.pooled(targetConfig)) {
+    CommandResult result = unix.execute(
+            "app",
+            "oracle",
+            new UnixCommandRequest(
+                    "whoami",
+                    Duration.ofSeconds(5)
+            )
+    );
+}
+```
+
+### Custom Facade Construction
+
+Consumers may also create a facade from explicitly provided collaborators:
+
+```java
+UnixSessionProvider provider = new UnixSessionProviderFactory().createPooled();
+UnixHostSessionRequestFactory requestFactory = new UnixHostSessionRequestFactory(targetConfig);
+
+try (UnixFacade unix = new UnixFacade(provider, requestFactory);
+     UnixHostSession session = unix.open("app")) {
+
+    CommandResult result = session.execute(new UnixCommandRequest(
+            "hostname",
+            Duration.ofSeconds(5)
+    ));
+}
+```
+
+This constructor is useful for tests, custom providers, alternative transport implementations, or advanced lifecycle control.
+
+### Ownership and Lifecycle
+
+`UnixFacade` owns the `UnixSessionProvider` passed to it.
+
+Closing the facade closes the underlying provider.
+
+For direct providers, closing a session closes the physical Unix session.
+
+For pooled providers, closing a borrowed session returns it to the pool, while closing the facade closes the pool and idle physical sessions.
+
+The recommended pattern is to use try-with-resources for both the facade and borrowed sessions.
+
+## Unix Host Session Request Factory
+
+QualiStrata provides `UnixHostSessionRequestFactory` for creating `UnixHostSessionRequest` instances from resolved target configuration.
+
+This factory hides host lookup logic from consuming projects.
+
+Instead of manually extracting `HostConfig` from `TargetConfig.hosts()` and creating the request by hand, consumers can create requests by logical host alias.
+
+### Basic Usage
+
+```java
+TargetConfig targetConfig = QualiStrataConfig.resolve();
+
+UnixHostSessionRequestFactory requestFactory = new UnixHostSessionRequestFactory(targetConfig);
+
+UnixHostSessionRequest request = requestFactory.create("app");
+```
+
+This creates a request for the `app` host and uses the host default user.
+
+The factory expects that `TargetConfig` is already resolved and merged. It does not load files, merge secrets, or perform project-specific validation.
+
+### Explicit User Alias
+
+A consumer may explicitly select a user alias configured under the host:
+
+```java
+UnixHostSessionRequest request = requestFactory.create("app", "oracle");
+```
+
+When the user alias is not provided, blank, or `null`, the request uses the host default user.
+
+### Full Provider Flow
+
+A typical lower-level consumer flow is:
+
+```java
+TargetConfig targetConfig = QualiStrataConfig.resolve();
+
+UnixHostSessionRequestFactory requestFactory = new UnixHostSessionRequestFactory(targetConfig);
+UnixSessionProviderFactory providerFactory = new UnixSessionProviderFactory();
+
+UnixHostSessionRequest request = requestFactory.create("app");
+
+try (UnixSessionProvider provider = providerFactory.createPooled();
+     UnixHostSession session = provider.open(request)) {
+
+    CommandResult result = session.execute(new UnixCommandRequest(
+            "hostname",
+            Duration.ofSeconds(5)
+    ));
+}
+```
+
+This flow is useful when a consumer wants to manage the provider directly instead of using `UnixFacade`.
+
+### Error Handling
+
+`UnixHostSessionRequestFactory` fails fast with `UnixSessionException` when:
+
+* target configuration is `null`;
+* host alias is `null` or blank;
+* target configuration does not contain Unix hosts;
+* requested host alias is not configured.
+
+User alias validation is intentionally delegated to `UnixHostSessionRequest` and the existing Unix session request validation layer.
+
+This keeps the request factory focused on target host lookup, while session validation remains centralized in the Unix session layer.
 
 ## Unix Session Provider Factory
 
@@ -499,7 +468,7 @@ This is useful for tests, local implementations, embedded environments, or futur
 
 ### Usage Pattern
 
-A typical consumer flow is:
+A typical provider-level consumer flow is:
 
 ```java
 UnixSessionProviderFactory factory = new UnixSessionProviderFactory();
@@ -520,72 +489,288 @@ For pooled providers, closing a borrowed `UnixHostSession` returns the physical 
 
 Closing the provider closes the underlying pool and all idle physical sessions.
 
-## Unix Host Session Request Factory
+## Command Execution Layer
 
-QualiStrata provides `UnixHostSessionRequestFactory` for creating `UnixHostSessionRequest` instances from resolved target configuration.
+`UnixCommandRequest` describes a command and optional timeout.
 
-This factory hides host lookup logic from consuming projects.
+`UnixHostSession` accepts a `UnixCommandRequest` and returns `CommandResult`.
 
-Instead of manually extracting `HostConfig` from `TargetConfig.hosts()` and creating the request by hand, consumers can create requests by logical host alias.
+A non-zero exit code is a valid command result and must not automatically be treated as a framework exception.
 
-### Basic Usage
+Framework-level exceptions should be reserved for cases such as:
+
+* invalid request;
+* infrastructure failure;
+* timeout;
+* interrupted execution;
+* connection failure;
+* inability to start or read command output.
+
+## Local Command Client
+
+`LocalUnixCommandClient` executes commands on the machine where tests are running.
+
+It is based on `ProcessBuilder`.
+
+It is useful for:
+
+* local diagnostics;
+* unit and integration tests;
+* validating command execution contracts;
+* reference behavior for command execution.
+
+Although the module is called `qualistrata-unix`, the local client supports both Unix-like systems and Windows developer machines through a small shell adapter.
+
+## Host Session Layer
+
+`UnixHostSession` represents an open execution context bound to a specific host and user.
+
+A session may represent:
+
+* a physical SSH connection;
+* a pooled wrapper around a physical connection;
+* a local process execution context;
+* a mock session used in tests.
+
+Consumers should use try-with-resources:
 
 ```java
-TargetConfig targetConfig = QualiStrataConfig.resolve();
-
-UnixHostSessionRequestFactory requestFactory = new UnixHostSessionRequestFactory(targetConfig);
-
-UnixHostSessionRequest request = requestFactory.create("app");
-```
-
-This creates a request for the `app` host and uses the host default user.
-
-The factory expects that `TargetConfig` is already resolved and merged. It does not load files, merge secrets, or perform project-specific validation.
-
-### Explicit User Alias
-
-A consumer may explicitly select a user alias configured under the host:
-
-```java
-UnixHostSessionRequest request = requestFactory.create("app", "oracle");
-```
-
-When the user alias is not provided, blank, or `null`, the request uses the host default user.
-
-### Full Provider Flow
-
-A typical consumer flow is:
-
-```java
-TargetConfig targetConfig = QualiStrataConfig.resolve();
-
-UnixHostSessionRequestFactory requestFactory = new UnixHostSessionRequestFactory(targetConfig);
-UnixSessionProviderFactory providerFactory = new UnixSessionProviderFactory();
-
-UnixHostSessionRequest request = requestFactory.create("app");
-
-try (UnixSessionProvider provider = providerFactory.createPooled();
-     UnixHostSession session = provider.open(request)) {
-
-    CommandResult result = session.execute(new UnixCommandRequest(
-            "hostname",
-            Duration.ofSeconds(5)
-    ));
+try (UnixHostSession session = sessionProvider.open(request)) {
+    session.execute(commandRequest);
 }
 ```
 
-### Error Handling
+## Direct Session Provider
 
-`UnixHostSessionRequestFactory` fails fast with `UnixSessionException` when:
+`DirectUnixSessionProvider` opens a new physical session for every request.
 
-- target configuration is `null`;
-- host alias is `null` or blank;
-- target configuration does not contain Unix hosts;
-- requested host alias is not configured.
+It delegates session creation to `UnixHostSessionFactory`.
 
-User alias validation is intentionally delegated to `UnixHostSessionRequest` and the existing Unix session request validation layer.
+It does not use pooling.
 
-This keeps the request factory focused on target host lookup, while session validation remains centralized in the Unix session layer.
+This provider is useful for:
+
+* diagnostics;
+* simple projects;
+* fallback mode;
+* tests;
+* troubleshooting scenarios where pool behavior should be excluded.
+
+## Pooled Session Provider
+
+`PooledUnixSessionProvider` borrows a session from `UnixHostSessionPool`.
+
+It returns a consumer-facing `UnixHostSession` wrapper.
+
+When the wrapper is closed, the borrowed session is released back to the pool.
+
+This means:
+
+```java
+session.close();
+```
+
+does not necessarily close the physical connection.
+
+For pooled sessions, `close()` means:
+
+```text
+return borrowed session to the pool
+```
+
+## Pool Lifecycle
+
+`UnixHostSessionPool` defines the reusable session lifecycle:
+
+```text
+borrow
+release
+invalidate
+close
+```
+
+The intended meaning is:
+
+| Operation    | Purpose                                              |
+| ------------ | ---------------------------------------------------- |
+| `borrow`     | Get a reusable session for a host/user request.      |
+| `release`    | Return a healthy session to the pool.                |
+| `invalidate` | Remove a broken or unsafe session from reuse.        |
+| `close`      | Close the pool and release all underlying resources. |
+
+## Session Health Checks
+
+Pooled sessions should be checked before reuse.
+
+A session may still exist as an object but no longer be safe to reuse because the remote host closed the connection, authentication state expired, or the underlying transport became broken.
+
+QualiStrata models this with `UnixSessionHealthCheck`.
+
+The default implementation is `OpenUnixSessionHealthCheck`, which treats a session as healthy when it is non-null and open.
+
+The simple pool uses the health check before returning an idle session:
+
+```text
+borrow idle session
+  -> check health
+  -> if healthy: reuse
+  -> if unhealthy: close, remove from pool accounting, create replacement when possible
+```
+
+Future SSH-specific implementations may provide protocol-level health checks.
+
+Health checks should not treat normal non-zero command exit codes as session failures.
+
+## Release vs Invalidate
+
+A healthy session should be released:
+
+```text
+borrow -> use -> close -> release
+```
+
+A broken session should be invalidated:
+
+```text
+borrow -> failure -> invalidate -> close physical session -> remove from pool -> replacement on next borrow
+```
+
+Broken sessions must not be returned to the reusable pool.
+
+Examples of situations where a session may need invalidation:
+
+* SSH connection is broken;
+* authentication state is invalid;
+* command channel cannot be opened;
+* session health check fails;
+* remote host closes the connection;
+* command execution fails due to infrastructure-level session problem.
+
+Normal non-zero command exit codes do not automatically mean the session is broken.
+
+## Invalidatable Sessions
+
+Invalidation is modeled as an optional session capability.
+
+The base `UnixHostSession` contract defines only common session operations:
+
+```text
+execute
+isOpen
+close
+```
+
+Pool-aware sessions that support explicit invalidation may implement `InvalidatableUnixHostSession`.
+
+This keeps the base session abstraction simple and avoids forcing every session implementation to support pooling-specific lifecycle operations.
+
+Consumer code may use invalidation when it detects an infrastructure-level session problem:
+
+```java
+if (session instanceof InvalidatableUnixHostSession invalidatableSession) {
+    invalidatableSession.invalidate();
+}
+```
+
+For pooled sessions:
+
+```text
+close()
+  -> releases a healthy borrowed session back to the pool
+
+invalidate()
+  -> removes a broken borrowed session from the pool
+  -> closes the physical session
+  -> allows a replacement session to be created on the next borrow
+```
+
+Invalidation must be idempotent from the consumer perspective. Calling `invalidate()` multiple times must not invalidate the same physical session more than once.
+
+Calling `close()` after `invalidate()` must not return the invalidated session to the pool.
+
+## Pool Configuration
+
+Pool settings come from `UnixPoolConfig` in target configuration.
+
+Current generic pool fields are:
+
+| Field                  | Purpose                                                        |
+| ---------------------- | -------------------------------------------------------------- |
+| `size`                 | Maximum number of reusable sessions.                           |
+| `keepAliveSeconds`     | Idle session keep-alive or validation interval.                |
+| `borrowTimeoutSeconds` | Maximum time to wait for a session when the pool is exhausted. |
+
+The exact behavior belongs to the concrete pool implementation.
+
+## SSH Connection Abstraction
+
+QualiStrata separates Unix session lifecycle from the concrete SSH library.
+
+The SSH abstraction layer contains:
+
+* `SshConnectionRequest`;
+* `SshConnection`;
+* `SshConnectionFactory`;
+* `SshConnectionException`;
+* `SshUnixHostSession`;
+* `SshUnixHostSessionFactory`.
+
+The intended chain is:
+
+```text
+UnixSessionProvider
+  -> DirectUnixSessionProvider or PooledUnixSessionProvider
+  -> UnixHostSessionFactory
+  -> SshUnixHostSessionFactory
+  -> SshConnectionFactory
+  -> concrete SSH implementation
+```
+
+`SshUnixHostSessionFactory` converts generic `HostConfig` and `UserConfig` into `SshConnectionRequest`.
+
+The concrete SSH implementation is intentionally hidden behind `SshConnectionFactory`.
+
+This allows the framework to support JSch, Apache MINA SSHD, SSHJ, or another SSH transport library later without changing the higher-level Unix session contracts.
+
+## JSch SSH Implementation
+
+QualiStrata provides a JSch-based SSH transport implementation using the maintained `com.github.mwiede:jsch` fork.
+
+The implementation includes:
+
+* `JschSshConnectionFactory`;
+* `JschSshConnection`.
+
+The implementation is hidden behind the generic SSH abstraction:
+
+```text
+SshConnectionFactory
+  -> JschSshConnectionFactory
+
+SshConnection
+  -> JschSshConnection
+```
+
+Higher-level Unix session code should still depend on generic contracts:
+
+```text
+UnixFacade
+UnixSessionProvider
+UnixHostSessionFactory
+SshConnectionFactory
+```
+
+and not directly on JSch classes.
+
+`JschSshConnectionFactory` opens connected SSH sessions from `SshConnectionRequest`.
+
+`JschSshConnection` executes commands through JSch exec channels and returns `CommandResult`.
+
+A non-zero command exit code is returned as a normal command result.
+
+Transport-level failures are reported as `SshConnectionException`.
+
+Regular unit tests do not open real SSH connections. Real SSH connectivity tests must be implemented as explicit integration tests with external infrastructure configuration.
 
 ## SSH Integration Test Configuration
 
@@ -646,24 +831,32 @@ Integration-test secrets must never be committed to the repository.
 
 Use command-line system properties, local untracked configuration, CI secrets, or another secure secret-management mechanism.
 
+## Consumer Responsibility
 
-## Current Status
+Consumers should:
 
-The current implementation includes:
+* prefer `UnixFacade` for high-level Unix operations;
+* depend on generic contracts such as `UnixSessionProvider` and `UnixHostSession`;
+* use try-with-resources;
+* treat non-zero exit code as command result;
+* avoid managing SSH connections directly;
+* avoid manually opening and closing physical sessions unless implementing infrastructure code.
 
-* command execution contracts;
-* local command execution implementation;
-* session contracts;
-* direct session provider;
-* pooled session provider wrapper;
-* session request validation;
-* pooling contracts.
+Consumers should not:
 
-The current implementation does not yet include:
+* depend directly on JSch or SSH implementation classes;
+* bypass `UnixSessionProvider` when pooling is expected;
+* return broken sessions to the pool;
+* assume that `session.close()` always physically closes the connection.
 
-* real SSH/JSch session implementation;
-* concrete in-memory session pool;
-* session health checks;
-* automatic invalidation on infrastructure failures.
+## Implementation Responsibility
 
-These will be introduced in later iterations.
+Concrete Unix implementations should:
+
+* validate session requests before opening or borrowing sessions;
+* respect `UnixPoolConfig`;
+* keep pooling transparent for consumers;
+* return healthy sessions to the pool;
+* invalidate unsafe sessions;
+* close all physical resources when the provider, facade, or pool is closed;
+* provide clear diagnostics for connection and session failures.

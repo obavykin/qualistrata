@@ -38,3 +38,4 @@ The project follows a simple chronological changelog format during early develop
 - Documentation for Unix session provider factory usage;
 - Unix host session request factory for creating session requests from resolved target configuration;
 - Documentation for Unix host session request factory usage;
+- Documentation for high-level Unix facade usage;
