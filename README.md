@@ -112,6 +112,8 @@ QualiStrata uses two test layers:
 
 Integration tests are intentionally not part of the regular build because they may require external infrastructure such as SSH hosts, databases, browsers, or test environments.
 
+Unix SSH integration-test configuration is documented in [Unix session and pooling architecture](docs/unix/session-and-pooling.md#ssh-integration-test-configuration).
+
 Run the regular build:
 
 ```powershell

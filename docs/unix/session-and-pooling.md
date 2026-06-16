@@ -397,6 +397,65 @@ Transport-level failures are reported as `SshConnectionException`.
 
 Regular unit tests do not open real SSH connections. Real SSH connectivity tests must be implemented as explicit integration tests with external infrastructure configuration.
 
+## SSH Integration Test Configuration
+
+QualiStrata includes a guarded JSch SSH integration test that verifies real SSH connectivity and remote command execution.
+
+The test is located under the `integrationTest` source set and is not executed by the regular `build` task.
+
+Run regular build:
+
+```powershell
+.\gradlew.bat clean build
+```
+
+Run integration tests explicitly:
+
+```powershell
+.\gradlew.bat :qualistrata-unix:integrationTest
+```
+
+The SSH integration test is guarded by system properties. If the required SSH configuration is not provided, the test is skipped automatically.
+
+Supported properties:
+
+| Property                               |           Required | Description                              |
+| -------------------------------------- | -----------------: | ---------------------------------------- |
+| `qualistrata.integration.ssh.host`     |                yes | SSH host address or DNS name.            |
+| `qualistrata.integration.ssh.port`     |                 no | SSH port. Defaults to `22` when omitted. |
+| `qualistrata.integration.ssh.username` |                yes | SSH username.                            |
+| `qualistrata.integration.ssh.password` | password auth only | SSH password.                            |
+| `qualistrata.integration.ssh.keyPath`  |      key auth only | Path to a private SSH key.               |
+
+At least one authentication method must be provided:
+
+* password-based authentication via `qualistrata.integration.ssh.password`;
+* key-based authentication via `qualistrata.integration.ssh.keyPath`.
+
+Password-based example:
+
+```powershell
+.\gradlew.bat :qualistrata-unix:integrationTest --rerun-tasks `
+  "-Dqualistrata.integration.ssh.host=192.168.1.10" `
+  "-Dqualistrata.integration.ssh.port=22" `
+  "-Dqualistrata.integration.ssh.username=test-user" `
+  "-Dqualistrata.integration.ssh.password=secret-password"
+```
+
+Key-based example:
+
+```powershell
+.\gradlew.bat :qualistrata-unix:integrationTest --rerun-tasks `
+  "-Dqualistrata.integration.ssh.host=192.168.1.10" `
+  "-Dqualistrata.integration.ssh.port=22" `
+  "-Dqualistrata.integration.ssh.username=test-user" `
+  "-Dqualistrata.integration.ssh.keyPath=C:\path\to\private_key"
+```
+
+Integration-test secrets must never be committed to the repository.
+
+Use command-line system properties, local untracked configuration, CI secrets, or another secure secret-management mechanism.
+
 
 ## Current Status
 
