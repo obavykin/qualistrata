@@ -61,18 +61,18 @@ public class JsonEnvironmentCheckReportWriter implements EnvironmentCheckReportW
 
         json.append("{\n");
         appendStringField(json, "name", suite.name(), 1, true);
-        appendNumberField(json, "durationMillis", durationMillis(suite.duration()), 1, true);
-        appendNumberField(json, "passedCount", suite.passedCount(), 1, true);
-        appendNumberField(json, "failedCount", suite.failedCount(), 1, true);
-        appendNumberField(json, "skippedCount", suite.skippedCount(), 1, true);
-        appendBooleanField(json, "allPassed", suite.allPassed(), 1, true);
-        appendBooleanField(json, "hasFailures", suite.hasFailures(), 1, true);
-        appendBooleanField(json, "hasBlockingFailures", suite.hasBlockingFailures(), 1, true);
+        appendNumberField(json, "durationMillis", durationMillis(suite.duration()), 1);
+        appendNumberField(json, "passedCount", suite.passedCount(), 1);
+        appendNumberField(json, "failedCount", suite.failedCount(), 1);
+        appendNumberField(json, "skippedCount", suite.skippedCount(), 1);
+        appendBooleanField(json, "allPassed", suite.allPassed(), 1);
+        appendBooleanField(json, "hasFailures", suite.hasFailures(), 1);
+        appendBooleanField(json, "hasBlockingFailures", suite.hasBlockingFailures(), 1);
 
         indent(json, 1).append("\"results\": [\n");
 
         for (int index = 0; index < suite.results().size(); index++) {
-            appendResult(json, suite.results().get(index), 2);
+            appendResult(json, suite.results().get(index));
 
             if (index < suite.results().size() - 1) {
                 json.append(",");
@@ -92,13 +92,12 @@ public class JsonEnvironmentCheckReportWriter implements EnvironmentCheckReportW
      *
      * @param json JSON builder.
      * @param result check result.
-     * @param level indentation level.
      */
     private void appendResult(
             StringBuilder json,
-            EnvironmentCheckResult result,
-            int level
+            EnvironmentCheckResult result
     ) {
+        int level = 2;
         indent(json, level).append("{\n");
 
         appendStringField(json, "id", result.id(), level + 1, true);
@@ -106,8 +105,8 @@ public class JsonEnvironmentCheckReportWriter implements EnvironmentCheckReportW
         appendStringField(json, "status", result.status().name(), level + 1, true);
         appendStringField(json, "severity", result.severity().name(), level + 1, true);
         appendStringField(json, "message", result.message(), level + 1, true);
-        appendNumberField(json, "durationMillis", durationMillis(result.duration()), level + 1, true);
-        appendBooleanField(json, "blockingFailure", result.isBlockingFailure(), level + 1, true);
+        appendNumberField(json, "durationMillis", durationMillis(result.duration()), level + 1);
+        appendBooleanField(json, "blockingFailure", result.isBlockingFailure(), level + 1);
 
         indent(json, level + 1).append("\"details\": ");
         appendDetails(json, result.details(), level + 1);
@@ -216,18 +215,16 @@ public class JsonEnvironmentCheckReportWriter implements EnvironmentCheckReportW
     /**
      * Appends a JSON number field.
      *
-     * @param json JSON builder.
-     * @param name field name.
+     * @param json  JSON builder.
+     * @param name  field name.
      * @param value field value.
      * @param level indentation level.
-     * @param comma whether to append comma.
      */
     private void appendNumberField(
             StringBuilder json,
             String name,
             long value,
-            int level,
-            boolean comma
+            int level
     ) {
         indent(json, level)
                 .append("\"")
@@ -235,24 +232,22 @@ public class JsonEnvironmentCheckReportWriter implements EnvironmentCheckReportW
                 .append("\": ")
                 .append(value);
 
-        appendCommaAndNewLine(json, comma);
+        appendCommaAndNewLine(json, true);
     }
 
     /**
      * Appends a JSON boolean field.
      *
-     * @param json JSON builder.
-     * @param name field name.
+     * @param json  JSON builder.
+     * @param name  field name.
      * @param value field value.
      * @param level indentation level.
-     * @param comma whether to append comma.
      */
     private void appendBooleanField(
             StringBuilder json,
             String name,
             boolean value,
-            int level,
-            boolean comma
+            int level
     ) {
         indent(json, level)
                 .append("\"")
@@ -260,7 +255,7 @@ public class JsonEnvironmentCheckReportWriter implements EnvironmentCheckReportW
                 .append("\": ")
                 .append(value);
 
-        appendCommaAndNewLine(json, comma);
+        appendCommaAndNewLine(json, true);
     }
 
     /**
@@ -310,7 +305,7 @@ public class JsonEnvironmentCheckReportWriter implements EnvironmentCheckReportW
      * @return same builder.
      */
     private StringBuilder indent(StringBuilder builder, int level) {
-        return builder.append("    ".repeat(level));
+        return builder.repeat("    ", level);
     }
 
     /**

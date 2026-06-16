@@ -58,7 +58,7 @@ For most consumers, `UnixFacade` is the recommended entry point.
 
 It allows opening Unix sessions and executing commands by logical host alias from resolved target configuration.
 
-```java
+```text
 TargetConfig targetConfig = QualiStrataConfig.resolve();
 
 try (UnixFacade unix = UnixFacade.pooled(targetConfig);
@@ -147,7 +147,7 @@ This allows consumers to open Unix sessions and execute commands by logical host
 
 Use a pooled facade when physical Unix sessions should be reused.
 
-```java
+```text
 TargetConfig targetConfig = QualiStrataConfig.resolve();
 
 try (UnixFacade unix = UnixFacade.pooled(targetConfig);
@@ -170,7 +170,7 @@ Closing the facade closes the underlying provider and provider-level resources.
 
 Use a direct facade when every opened session should create a new physical Unix session.
 
-```java
+```text
 TargetConfig targetConfig = QualiStrataConfig.resolve();
 
 try (UnixFacade unix = UnixFacade.direct(targetConfig);
@@ -189,7 +189,7 @@ A direct facade is simple and predictable, but it does not reuse physical SSH se
 
 Consumers may create a facade with an explicit provider type:
 
-```java
+```text
 TargetConfig targetConfig = QualiStrataConfig.resolve();
 
 try (UnixFacade unix = UnixFacade.of(targetConfig, UnixSessionProviderType.POOLED);
@@ -211,7 +211,7 @@ Supported provider types are:
 
 A session may be opened with an explicit user alias configured under the selected host:
 
-```java
+```text
 TargetConfig targetConfig = QualiStrataConfig.resolve();
 
 try (UnixFacade unix = UnixFacade.pooled(targetConfig);
@@ -232,7 +232,7 @@ When user alias is not provided, the host default user is used.
 
 The facade opens a session, executes the command, and closes the borrowed session automatically.
 
-```java
+```text
 TargetConfig targetConfig = QualiStrataConfig.resolve();
 
 try (UnixFacade unix = UnixFacade.pooled(targetConfig)) {
@@ -250,7 +250,7 @@ For pooled providers, closing the borrowed session returns the physical session 
 
 One-shot execution with an explicit user alias:
 
-```java
+```text
 TargetConfig targetConfig = QualiStrataConfig.resolve();
 
 try (UnixFacade unix = UnixFacade.pooled(targetConfig)) {
@@ -272,7 +272,7 @@ Instead of manually creating `UnixCommandRequest`, consumers may pass a command 
 
 Execute a command on a host using the host default user and no explicit timeout:
 
-```java
+```text
 TargetConfig targetConfig = QualiStrataConfig.resolve();
 
 try (UnixFacade unix = UnixFacade.pooled(targetConfig)) {
@@ -282,7 +282,7 @@ try (UnixFacade unix = UnixFacade.pooled(targetConfig)) {
 
 Execute a command on a host using the host default user and an explicit timeout:
 
-```java
+```text
 TargetConfig targetConfig = QualiStrataConfig.resolve();
 
 try (UnixFacade unix = UnixFacade.pooled(targetConfig)) {
@@ -296,7 +296,7 @@ try (UnixFacade unix = UnixFacade.pooled(targetConfig)) {
 
 Execute a command on a host using an explicit user alias and no explicit timeout:
 
-```java
+```text
 TargetConfig targetConfig = QualiStrataConfig.resolve();
 
 try (UnixFacade unix = UnixFacade.pooled(targetConfig)) {
@@ -310,7 +310,7 @@ try (UnixFacade unix = UnixFacade.pooled(targetConfig)) {
 
 Execute a command on a host using an explicit user alias and an explicit timeout:
 
-```java
+```text
 TargetConfig targetConfig = QualiStrataConfig.resolve();
 
 try (UnixFacade unix = UnixFacade.pooled(targetConfig)) {
@@ -333,7 +333,7 @@ Use explicit `UnixCommandRequest` when command construction, timeout handling, o
 
 Consumers may also create a facade from explicitly provided collaborators:
 
-```java
+```text
 UnixSessionProvider provider = new UnixSessionProviderFactory().createPooled();
 UnixHostSessionRequestFactory requestFactory = new UnixHostSessionRequestFactory(targetConfig);
 
@@ -371,7 +371,7 @@ Instead of manually extracting `HostConfig` from `TargetConfig.hosts()` and crea
 
 ### Basic Usage
 
-```java
+```text
 TargetConfig targetConfig = QualiStrataConfig.resolve();
 
 UnixHostSessionRequestFactory requestFactory = new UnixHostSessionRequestFactory(targetConfig);
@@ -387,7 +387,7 @@ The factory expects that `TargetConfig` is already resolved and merged. It does 
 
 A consumer may explicitly select a user alias configured under the host:
 
-```java
+```text
 UnixHostSessionRequest request = requestFactory.create("app", "oracle");
 ```
 
@@ -397,7 +397,7 @@ When the user alias is not provided, blank, or `null`, the request uses the host
 
 A typical lower-level consumer flow is:
 
-```java
+```text
 TargetConfig targetConfig = QualiStrataConfig.resolve();
 
 UnixHostSessionRequestFactory requestFactory = new UnixHostSessionRequestFactory(targetConfig);
@@ -448,7 +448,7 @@ This allows consuming projects to depend on the generic `UnixSessionProvider` co
 
 The default constructor uses the JSch-based SSH transport implementation.
 
-```java
+```text
 UnixSessionProviderFactory factory = new UnixSessionProviderFactory();
 
 UnixSessionProvider provider = factory.create(UnixSessionProviderType.POOLED);
@@ -468,7 +468,7 @@ UnixSessionProvider
 
 Use a direct provider when each request should open a new physical Unix session.
 
-```java
+```text
 UnixSessionProviderFactory factory = new UnixSessionProviderFactory();
 
 UnixSessionProvider provider = factory.createDirect();
@@ -476,7 +476,7 @@ UnixSessionProvider provider = factory.createDirect();
 
 Equivalent typed creation:
 
-```java
+```text
 UnixSessionProvider provider = factory.create(UnixSessionProviderType.DIRECT);
 ```
 
@@ -486,7 +486,7 @@ A direct provider is simple and predictable, but it does not reuse physical SSH 
 
 Use a pooled provider when physical Unix sessions should be reused.
 
-```java
+```text
 UnixSessionProviderFactory factory = new UnixSessionProviderFactory();
 
 UnixSessionProvider provider = factory.createPooled();
@@ -494,7 +494,7 @@ UnixSessionProvider provider = factory.createPooled();
 
 Equivalent typed creation:
 
-```java
+```text
 UnixSessionProvider provider = factory.create(UnixSessionProviderType.POOLED);
 ```
 
@@ -504,7 +504,7 @@ A pooled provider is usually preferred for repeated command execution against th
 
 Consumers may provide a custom `SshConnectionFactory` while still using QualiStrata's standard SSH-backed Unix session implementation.
 
-```java
+```text
 SshConnectionFactory connectionFactory = new JschSshConnectionFactory();
 
 UnixSessionProviderFactory factory = new UnixSessionProviderFactory(connectionFactory);
@@ -518,7 +518,7 @@ This constructor is useful for alternative SSH transports, test doubles, or cust
 
 The most flexible option is to provide a custom `UnixHostSessionFactory`.
 
-```java
+```text
 UnixHostSessionFactory hostSessionFactory = request -> {
     // Create and return a UnixHostSession implementation.
 };
@@ -534,7 +534,7 @@ This is useful for tests, local implementations, embedded environments, or futur
 
 A typical provider-level consumer flow is:
 
-```java
+```text
 UnixSessionProviderFactory factory = new UnixSessionProviderFactory();
 
 try (UnixSessionProvider provider = factory.createPooled();
@@ -598,7 +598,7 @@ A session may represent:
 
 Consumers should use try-with-resources:
 
-```java
+```text
 try (UnixHostSession session = sessionProvider.open(request)) {
     session.execute(commandRequest);
 }
@@ -630,7 +630,7 @@ When the wrapper is closed, the borrowed session is released back to the pool.
 
 This means:
 
-```java
+```text
 session.close();
 ```
 
@@ -730,7 +730,7 @@ This keeps the base session abstraction simple and avoids forcing every session 
 
 Consumer code may use invalidation when it detects an infrastructure-level session problem:
 
-```java
+```text
 if (session instanceof InvalidatableUnixHostSession invalidatableSession) {
     invalidatableSession.invalidate();
 }
@@ -911,7 +911,7 @@ This makes Unix command checks suitable for environment readiness suites, pre-te
 
 ### Basic Unix Command Check
 
-```java
+```text
 TargetConfig targetConfig = QualiStrataConfig.resolve();
 
 try (UnixFacade unix = UnixFacade.pooled(targetConfig)) {
@@ -935,7 +935,7 @@ The check uses the host default user unless an explicit user alias is provided.
 
 ### Explicit User Alias
 
-```java
+```text
 TargetConfig targetConfig = QualiStrataConfig.resolve();
 
 try (UnixFacade unix = UnixFacade.pooled(targetConfig)) {
@@ -960,7 +960,7 @@ This executes the command using the `oracle` user alias configured under the `ap
 
 `UnixCommandEnvironmentCheck` can be executed directly, but it is usually more useful as part of an `EnvironmentCheckRunner` suite.
 
-```java
+```text
 TargetConfig targetConfig = QualiStrataConfig.resolve();
 
 EnvironmentCheckRunner runner = new EnvironmentCheckRunner();
