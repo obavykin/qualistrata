@@ -35,3 +35,4 @@ The project follows a simple chronological changelog format during early develop
 - Documentation for JSch SSH transport implementation;
 - Integration-test source set for infrastructure-dependent tests;
 - Documentation for guarded SSH integration-test configuration;
+- Documentation for Unix session provider factory usage;

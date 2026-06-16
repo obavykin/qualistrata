@@ -397,6 +397,130 @@ Transport-level failures are reported as `SshConnectionException`.
 
 Regular unit tests do not open real SSH connections. Real SSH connectivity tests must be implemented as explicit integration tests with external infrastructure configuration.
 
+## Unix Session Provider Factory
+
+QualiStrata provides `UnixSessionProviderFactory` as a high-level entry point for creating Unix session providers.
+
+The factory hides low-level wiring between:
+
+* `SshConnectionFactory`;
+* `SshUnixHostSessionFactory`;
+* `SimpleUnixHostSessionPool`;
+* `DirectUnixSessionProvider`;
+* `PooledUnixSessionProvider`.
+
+This allows consuming projects to depend on the generic `UnixSessionProvider` contract instead of assembling the full object graph manually.
+
+### Default JSch-backed Factory
+
+The default constructor uses the JSch-based SSH transport implementation.
+
+```java
+UnixSessionProviderFactory factory = new UnixSessionProviderFactory();
+
+UnixSessionProvider provider = factory.create(UnixSessionProviderType.POOLED);
+```
+
+This creates a pooled Unix session provider backed by the following chain:
+
+```text
+UnixSessionProvider
+  -> PooledUnixSessionProvider
+  -> SimpleUnixHostSessionPool
+  -> SshUnixHostSessionFactory
+  -> JschSshConnectionFactory
+```
+
+### Direct Provider
+
+Use a direct provider when each request should open a new physical Unix session.
+
+```java
+UnixSessionProviderFactory factory = new UnixSessionProviderFactory();
+
+UnixSessionProvider provider = factory.createDirect();
+```
+
+Equivalent typed creation:
+
+```java
+UnixSessionProvider provider = factory.create(UnixSessionProviderType.DIRECT);
+```
+
+A direct provider is simple and predictable, but it does not reuse physical SSH sessions.
+
+### Pooled Provider
+
+Use a pooled provider when physical Unix sessions should be reused.
+
+```java
+UnixSessionProviderFactory factory = new UnixSessionProviderFactory();
+
+UnixSessionProvider provider = factory.createPooled();
+```
+
+Equivalent typed creation:
+
+```java
+UnixSessionProvider provider = factory.create(UnixSessionProviderType.POOLED);
+```
+
+A pooled provider is usually preferred for repeated command execution against the same hosts because it avoids opening a new SSH connection for every operation.
+
+### Custom SSH Connection Factory
+
+Consumers may provide a custom `SshConnectionFactory` while still using QualiStrata's standard SSH-backed Unix session implementation.
+
+```java
+SshConnectionFactory connectionFactory = new JschSshConnectionFactory();
+
+UnixSessionProviderFactory factory = new UnixSessionProviderFactory(connectionFactory);
+
+UnixSessionProvider provider = factory.createPooled();
+```
+
+This constructor is useful for alternative SSH transports, test doubles, or custom connection behavior.
+
+### Custom Unix Host Session Factory
+
+The most flexible option is to provide a custom `UnixHostSessionFactory`.
+
+```java
+UnixHostSessionFactory hostSessionFactory = request -> {
+    // Create and return a UnixHostSession implementation.
+};
+
+UnixSessionProviderFactory factory = new UnixSessionProviderFactory(hostSessionFactory);
+
+UnixSessionProvider provider = factory.createPooled();
+```
+
+This is useful for tests, local implementations, embedded environments, or future non-SSH Unix session mechanisms.
+
+### Usage Pattern
+
+A typical consumer flow is:
+
+```java
+UnixSessionProviderFactory factory = new UnixSessionProviderFactory();
+
+try (UnixSessionProvider provider = factory.createPooled();
+     UnixHostSession session = provider.open(request)) {
+
+    CommandResult result = session.execute(new UnixCommandRequest(
+            "hostname",
+            Duration.ofSeconds(5)
+    ));
+}
+```
+
+The `UnixSessionProvider` owns provider-level resources.
+
+For pooled providers, closing a borrowed `UnixHostSession` returns the physical session to the pool.
+
+Closing the provider closes the underlying pool and all idle physical sessions.
+
+
 ## SSH Integration Test Configuration
 
 QualiStrata includes a guarded JSch SSH integration test that verifies real SSH connectivity and remote command execution.
