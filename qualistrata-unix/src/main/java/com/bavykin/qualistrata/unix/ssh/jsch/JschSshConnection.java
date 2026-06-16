@@ -9,7 +9,9 @@ import com.jcraft.jsch.ChannelExec;
 import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.Session;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 
@@ -18,7 +20,7 @@ import java.time.Duration;
  *
  * <p>The connection owns an already opened JSch {@link Session}. Each command
  * execution opens a dedicated {@code exec} channel, waits for command
- * completion, reads stdout and stderr, and then disconnects the channel.</p>
+ * completion, drains stdout and stderr, and then disconnects the channel.</p>
  *
  * <p>Non-zero command exit codes are returned as normal {@link CommandResult}
  * values. Transport-level failures, timeouts, interrupted execution, and output
@@ -27,6 +29,7 @@ import java.time.Duration;
 public class JschSshConnection implements SshConnection {
 
     private static final long POLL_INTERVAL_MILLIS = 50L;
+    private static final int DEFAULT_CHANNEL_CONNECT_TIMEOUT_MILLIS = 10_000;
 
     private final Session session;
     private final UnixCommandRequestValidator requestValidator;
@@ -77,13 +80,21 @@ public class JschSshConnection implements SshConnection {
         ChannelExec channel = openExecChannel(request.command());
 
         try {
-            channel.connect();
-            waitForCompletion(channel, request.timeout());
+            InputStream stdoutStream = channel.getInputStream();
+            ByteArrayOutputStream stdout = new ByteArrayOutputStream();
+            ByteArrayOutputStream stderr = new ByteArrayOutputStream();
 
-            String stdout = new String(channel.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
-            String stderr = new String(channel.getErrStream().readAllBytes(), StandardCharsets.UTF_8);
+            channel.setErrStream(stderr);
+            channel.connect(resolveChannelConnectTimeoutMillis(request.timeout()));
 
-            return new CommandResult(channel.getExitStatus(), stdout, stderr);
+            waitForCompletionAndDrainOutput(channel, stdoutStream, stdout, request.timeout());
+            drainAvailableOutput(stdoutStream, stdout);
+
+            return new CommandResult(
+                    channel.getExitStatus(),
+                    stdout.toString(StandardCharsets.UTF_8),
+                    stderr.toString(StandardCharsets.UTF_8)
+            );
         } catch (JSchException exception) {
             throw new SshConnectionException("Failed to execute SSH command: " + request.command(), exception);
         } catch (IOException exception) {
@@ -115,7 +126,7 @@ public class JschSshConnection implements SshConnection {
      * Opens a JSch exec channel for command execution.
      *
      * @param command command line to execute.
-     * @return opened exec channel before connection.
+     * @return exec channel before connection.
      */
     private ChannelExec openExecChannel(String command) {
         try {
@@ -130,17 +141,28 @@ public class JschSshConnection implements SshConnection {
     }
 
     /**
-     * Waits until the exec channel is closed or timeout expires.
+     * Waits until the exec channel is closed or timeout expires while draining
+     * available stdout data.
      *
      * @param channel exec channel.
+     * @param stdoutStream stdout stream.
+     * @param stdout stdout buffer.
      * @param timeout optional command timeout.
+     * @throws IOException if stdout cannot be read.
      */
-    private void waitForCompletion(ChannelExec channel, Duration timeout) {
+    private void waitForCompletionAndDrainOutput(
+            ChannelExec channel,
+            InputStream stdoutStream,
+            ByteArrayOutputStream stdout,
+            Duration timeout
+    ) throws IOException {
         long deadline = timeout == null
                 ? Long.MAX_VALUE
                 : System.nanoTime() + timeout.toNanos();
 
         while (!channel.isClosed()) {
+            drainAvailableOutput(stdoutStream, stdout);
+
             if (System.nanoTime() > deadline) {
                 channel.disconnect();
 
@@ -149,6 +171,44 @@ public class JschSshConnection implements SshConnection {
 
             sleepBeforeNextPoll();
         }
+    }
+
+    /**
+     * Reads all currently available stdout bytes without blocking for EOF.
+     *
+     * @param stream stdout stream.
+     * @param output output buffer.
+     * @throws IOException if stdout cannot be read.
+     */
+    private void drainAvailableOutput(
+            InputStream stream,
+            ByteArrayOutputStream output
+    ) throws IOException {
+        byte[] buffer = new byte[8192];
+
+        while (stream.available() > 0) {
+            int read = stream.read(buffer, 0, Math.min(buffer.length, stream.available()));
+
+            if (read < 0) {
+                return;
+            }
+
+            output.write(buffer, 0, read);
+        }
+    }
+
+    /**
+     * Resolves channel connection timeout.
+     *
+     * @param commandTimeout optional command timeout.
+     * @return timeout in milliseconds.
+     */
+    private int resolveChannelConnectTimeoutMillis(Duration commandTimeout) {
+        if (commandTimeout == null) {
+            return DEFAULT_CHANNEL_CONNECT_TIMEOUT_MILLIS;
+        }
+
+        return Math.toIntExact(commandTimeout.toMillis());
     }
 
     /**
