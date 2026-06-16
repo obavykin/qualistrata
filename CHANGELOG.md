@@ -45,3 +45,4 @@ The project follows a simple chronological changelog format during early develop
 - Package-level Javadoc documentation for Unix public API and infrastructure packages;
 - Generic environment check result model and suite summary contracts;
 - Environment check definition and runner for executing check suites and aggregating results;
+- Unix command environment check for reusable command-based readiness validation;
