@@ -101,3 +101,19 @@ Project-specific validation, credential checks, connectivity checks, and client/
 
 ```bash
 ./gradlew build
+```
+
+### Test Types
+
+QualiStrata uses two test layers:
+
+- unit tests: executed by the regular `build` task;
+- integration tests: executed explicitly by the `integrationTest` task.
+
+Integration tests are intentionally not part of the regular build because they may require external infrastructure such as SSH hosts, databases, browsers, or test environments.
+
+Run the regular build:
+
+```powershell
+.\gradlew.bat clean build
+```

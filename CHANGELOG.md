@@ -8,7 +8,7 @@ The project follows a simple chronological changelog format during early develop
 
 ### Added
 
-- Initial multi-module Gradle project structure.
+- Initial multi-module Gradle project structure;
 - Core modules:
     - `qualistrata-core`
     - `qualistrata-ui`
@@ -16,20 +16,21 @@ The project follows a simple chronological changelog format during early develop
     - `qualistrata-db`
     - `qualistrata-unix`
     - `qualistrata-perf`
-- Initial project README.
-- Apache License 2.0.
-- Generic target configuration loader.
-- Deep target configuration merger.
-- Target selection model.
-- Target configuration path resolver.
-- Resolved target configuration service.
-- Unit tests for core configuration pipeline.
+- Initial project README;
+- Apache License 2.0;
+- Generic target configuration loader;
+- Deep target configuration merger;
+- Target selection model;
+- Target configuration path resolver;
+- Resolved target configuration service;
+- Unit tests for core configuration pipeline;
 - Generic structural validator for resolved target configuration;
 - Public configuration facade for resolving and validating target configuration;
 - Unix session and pooling architecture documentation;
-- Pooled Unix session invalidation support.
+- Pooled Unix session invalidation support;
 - Documentation for pooled Unix session invalidation lifecycle;
 - Generic Unix session health check contract and default open-session implementation;
 - SSH connection abstraction and SSH-backed Unix host session factory;
-- JSch-based SSH connection implementation.
-- Documentation for JSch SSH transport implementation.
+- JSch-based SSH connection implementation;
+- Documentation for JSch SSH transport implementation;
+- Integration-test source set for infrastructure-dependent tests;
