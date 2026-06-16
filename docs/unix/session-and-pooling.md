@@ -895,6 +895,167 @@ Integration-test secrets must never be committed to the repository.
 
 Use command-line system properties, local untracked configuration, CI secrets, or another secure secret-management mechanism.
 
+## Unix Command Environment Checks
+
+QualiStrata provides `UnixCommandEnvironmentCheck` as a reusable Unix-based readiness check.
+
+The check executes a Unix command through `UnixFacade` and converts the command result into a generic `EnvironmentCheckResult`.
+
+Exit code `0` is treated as a passed check.
+
+A non-zero exit code is treated as a failed check result.
+
+Infrastructure-level exceptions are also converted into failed check results instead of escaping as raw framework exceptions.
+
+This makes Unix command checks suitable for environment readiness suites, pre-test validation, diagnostics, and delivery-project-specific health checks.
+
+### Basic Unix Command Check
+
+```java
+TargetConfig targetConfig = QualiStrataConfig.resolve();
+
+try (UnixFacade unix = UnixFacade.pooled(targetConfig)) {
+    UnixCommandEnvironmentCheck check = new UnixCommandEnvironmentCheck(
+            unix,
+            "unix.app.hostname",
+            "Unix app hostname",
+            EnvironmentCheckSeverity.ERROR,
+            "app",
+            "hostname",
+            Duration.ofSeconds(5)
+    );
+
+    EnvironmentCheckResult result = check.check();
+}
+```
+
+The `app` value is a logical host alias from resolved target configuration.
+
+The check uses the host default user unless an explicit user alias is provided.
+
+### Explicit User Alias
+
+```java
+TargetConfig targetConfig = QualiStrataConfig.resolve();
+
+try (UnixFacade unix = UnixFacade.pooled(targetConfig)) {
+    UnixCommandEnvironmentCheck check = new UnixCommandEnvironmentCheck(
+            unix,
+            "unix.app.oracle-user",
+            "Unix app Oracle user",
+            EnvironmentCheckSeverity.ERROR,
+            "app",
+            "oracle",
+            "whoami",
+            Duration.ofSeconds(5)
+    );
+
+    EnvironmentCheckResult result = check.check();
+}
+```
+
+This executes the command using the `oracle` user alias configured under the `app` host.
+
+### Environment Check Runner
+
+`UnixCommandEnvironmentCheck` can be executed directly, but it is usually more useful as part of an `EnvironmentCheckRunner` suite.
+
+```java
+TargetConfig targetConfig = QualiStrataConfig.resolve();
+
+EnvironmentCheckRunner runner = new EnvironmentCheckRunner();
+
+try (UnixFacade unix = UnixFacade.pooled(targetConfig)) {
+    EnvironmentCheckSuiteResult suite = runner.run(
+            "Target readiness",
+            List.of(
+                    EnvironmentCheckDefinition.error(
+                            "unix.app.hostname",
+                            "Unix app hostname",
+                            new UnixCommandEnvironmentCheck(
+                                    unix,
+                                    "unix.app.hostname",
+                                    "Unix app hostname",
+                                    EnvironmentCheckSeverity.ERROR,
+                                    "app",
+                                    "hostname",
+                                    Duration.ofSeconds(5)
+                            )
+                    ),
+                    EnvironmentCheckDefinition.warning(
+                            "unix.app.optional-path",
+                            "Unix app optional path",
+                            new UnixCommandEnvironmentCheck(
+                                    unix,
+                                    "unix.app.optional-path",
+                                    "Unix app optional path",
+                                    EnvironmentCheckSeverity.WARNING,
+                                    "app",
+                                    "test -d /opt/optional",
+                                    Duration.ofSeconds(5)
+                            )
+                    )
+            )
+    );
+
+    if (suite.hasBlockingFailures()) {
+        throw new IllegalStateException("Target environment is not ready.");
+    }
+}
+```
+
+### Severity Policy
+
+The check itself does not stop test execution.
+
+It only returns `EnvironmentCheckResult`.
+
+The consuming project decides what to do with failed or skipped checks.
+
+By convention:
+
+- `EnvironmentCheckSeverity.ERROR` means the check is expected to block test execution when failed;
+- `EnvironmentCheckSeverity.WARNING` means the check should be reported but may not block execution;
+- `EnvironmentCheckSeverity.INFO` means the check is informational.
+
+The generic `EnvironmentCheckSuiteResult.hasBlockingFailures()` method treats failed `ERROR` checks as blocking.
+
+Project-specific validators may apply stricter or more relaxed policies.
+
+### Diagnostic Details
+
+`UnixCommandEnvironmentCheck` adds diagnostic details to the result:
+
+| Detail | Description |
+|---|---|
+| `hostAlias` | Logical host alias used for command execution. |
+| `userAlias` | User alias used for command execution, or blank when the host default user was used. |
+| `command` | Executed command line. |
+| `exitCode` | Command exit code. |
+| `stdout` | Captured standard output. |
+| `stderr` | Captured standard error. |
+| `exceptionType` | Exception class name when command execution failed with an exception. |
+
+These details can be used in reports, logs, and project-specific diagnostics.
+
+### Recommended Project Usage
+
+QualiStrata provides the generic building blocks.
+
+A consuming delivery project should define its own readiness suite using project-specific host aliases, commands, paths, services, and severity policy.
+
+For example, a delivery project may define checks such as:
+
+```text
+unix.app.connectivity
+unix.app.expected-folder
+unix.tracker.connectivity
+unix.tracker.service-running
+unix.db.oracle-user
+```
+
+The implementation of those checks can reuse `UnixCommandEnvironmentCheck`, while keeping all project-specific names, paths, services, users, and expected values outside QualiStrata.
+
 ## Consumer Responsibility
 
 Consumers should:

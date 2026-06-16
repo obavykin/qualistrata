@@ -46,3 +46,4 @@ The project follows a simple chronological changelog format during early develop
 - Generic environment check result model and suite summary contracts;
 - Environment check definition and runner for executing check suites and aggregating results;
 - Unix command environment check for reusable command-based readiness validation;
+- Documentation for Unix command environment checks and readiness suite usage;
