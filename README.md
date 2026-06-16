@@ -97,6 +97,44 @@ The facade resolves configuration layers, applies generic structural validation,
 
 Project-specific validation, credential checks, connectivity checks, and client/session creation should be implemented outside `qualistrata-core`.
 
+## Unix automation usage
+
+`qualistrata-unix` provides a high-level `UnixFacade` API for opening Unix sessions and executing commands by logical host alias from resolved target configuration.
+
+Typical usage:
+
+```java
+import com.bavykin.qualistrata.core.config.model.ResolvedTarget;
+import com.bavykin.qualistrata.core.contracts.unix.dto.CommandResult;
+import com.bavykin.qualistrata.unix.facade.UnixFacade;
+
+import java.time.Duration;
+
+ResolvedTarget target = config.resolveTarget(new TargetConfigResolutionRequest(
+        Path.of("."),
+        System.getProperties(),
+        System.getenv(),
+        null,
+        null
+));
+
+try (UnixFacade unix = UnixFacade.pooled(target.config())) {
+    CommandResult result = unix.execute(
+            "app",
+            "hostname",
+            Duration.ofSeconds(5)
+    );
+}
+```
+
+The `app` value is a logical host alias from the resolved target configuration.
+
+The facade hides lower-level SSH, pooling, session request, and provider wiring.
+
+For advanced lifecycle control, consumers may use `UnixSessionProviderFactory` and `UnixHostSessionRequestFactory` directly.
+
+Detailed Unix architecture and SSH integration-test configuration are documented in [Unix session and pooling architecture](docs/unix/session-and-pooling.md).
+
 ## Build
 
 ```bash
