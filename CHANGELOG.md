@@ -41,4 +41,5 @@ The project follows a simple chronological changelog format during early develop
 - Documentation for high-level Unix facade usage;
 - Convenience command execution overloads in `UnixFacade`;
 - Documentation for `UnixFacade` convenience command execution overloads;
-- - README usage example for high-level Unix automation via `UnixFacade`;
+- README usage example for high-level Unix automation via `UnixFacade`;
+- Package-level Javadoc documentation for Unix public API and infrastructure packages;

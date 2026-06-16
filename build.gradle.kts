@@ -88,3 +88,43 @@ subprojects {
         useJUnitPlatform()
     }
 }
+
+/*
+ * Builds a portable local library distribution for manual use in consuming
+ * projects that cannot depend on mavenLocal() or a remote Maven repository.
+ *
+ * The task is registered inside the qualistrata-unix project because Gradle 9
+ * does not allow unsafe cross-project resolution of another project's
+ * runtimeClasspath configuration from the root project.
+ *
+ * The distribution contains:
+ * - qualistrata-core jar;
+ * - qualistrata-unix jar;
+ * - runtime third-party dependencies required by qualistrata-unix, for example JSch.
+ */
+project(":qualistrata-unix") {
+    tasks.register<Copy>("qualistrataUnixLocalDistribution") {
+        description = "Builds a portable local distribution for qualistrata-unix."
+        group = "distribution"
+
+        dependsOn(
+            ":qualistrata-core:jar",
+            ":qualistrata-unix:jar"
+        )
+
+        into(rootProject.layout.buildDirectory.dir("distributions/qualistrata-unix-libs"))
+
+        from(project(":qualistrata-core").tasks.named("jar"))
+        from(tasks.named("jar"))
+
+        /*
+         * Copy third-party runtime dependencies owned by qualistrata-unix.
+         * Project jars are copied explicitly above to keep the distribution
+         * predictable and readable.
+         */
+        from(configurations.named("runtimeClasspath")) {
+            exclude("qualistrata-core-*.jar")
+            exclude("qualistrata-unix-*.jar")
+        }
+    }
+}
