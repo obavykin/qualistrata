@@ -1,4 +1,8 @@
-﻿plugins {
+﻿import org.gradle.api.plugins.JavaPluginExtension
+import org.gradle.api.publish.PublishingExtension
+import org.gradle.api.publish.maven.MavenPublication
+
+plugins {
     `java-library`
 }
 
@@ -87,44 +91,63 @@ subprojects {
     tasks.withType<Test>().configureEach {
         useJUnitPlatform()
     }
-}
 
-/*
- * Builds a portable local library distribution for manual use in consuming
- * projects that cannot depend on mavenLocal() or a remote Maven repository.
- *
- * The task is registered inside the qualistrata-unix project because Gradle 9
- * does not allow unsafe cross-project resolution of another project's
- * runtimeClasspath configuration from the root project.
- *
- * The distribution contains:
- * - qualistrata-core jar;
- * - qualistrata-unix jar;
- * - runtime third-party dependencies required by qualistrata-unix, for example JSch.
- */
-project(":qualistrata-unix") {
-    tasks.register<Copy>("qualistrataUnixLocalDistribution") {
-        description = "Builds a portable local distribution for qualistrata-unix."
-        group = "distribution"
+    plugins.withId("java-library") {
+        apply(plugin = "maven-publish")
 
-        dependsOn(
-            ":qualistrata-core:jar",
-            ":qualistrata-unix:jar"
-        )
+        extensions.configure<JavaPluginExtension>("java") {
+            withSourcesJar()
+            withJavadocJar()
+        }
 
-        into(rootProject.layout.buildDirectory.dir("distributions/qualistrata-unix-libs"))
+        extensions.configure<PublishingExtension>("publishing") {
+            publications {
+                create<MavenPublication>("mavenJava") {
+                    from(components["java"])
 
-        from(project(":qualistrata-core").tasks.named("jar"))
-        from(tasks.named("jar"))
+                    pom {
+                        name.set(project.name)
+                        description.set("QualiStrata test automation accelerator module: ${project.name}")
+                        url.set("https://github.com/obavykin/qualistrata")
 
-        /*
-         * Copy third-party runtime dependencies owned by qualistrata-unix.
-         * Project jars are copied explicitly above to keep the distribution
-         * predictable and readable.
-         */
-        from(configurations.named("runtimeClasspath")) {
-            exclude("qualistrata-core-*.jar")
-            exclude("qualistrata-unix-*.jar")
+                        licenses {
+                            license {
+                                name.set("Apache License, Version 2.0")
+                                url.set("https://www.apache.org/licenses/LICENSE-2.0")
+                            }
+                        }
+
+                        developers {
+                            developer {
+                                id.set("obavykin")
+                                name.set("Oleksandr Bavykin")
+                            }
+                        }
+
+                        scm {
+                            connection.set("scm:git:https://github.com/obavykin/qualistrata.git")
+                            developerConnection.set("scm:git:ssh://git@github.com:obavykin/qualistrata.git")
+                            url.set("https://github.com/obavykin/qualistrata")
+                        }
+                    }
+                }
+            }
+
+            repositories {
+                maven {
+                    name = "QualiStrataLocal"
+
+                    url = uri(
+                        providers.gradleProperty("qualistrata.localRepo")
+                            .orElse(
+                                rootProject.layout.buildDirectory
+                                    .dir("local-maven-repo")
+                                    .map { it.asFile.absolutePath }
+                            )
+                            .get()
+                    )
+                }
+            }
         }
     }
 }

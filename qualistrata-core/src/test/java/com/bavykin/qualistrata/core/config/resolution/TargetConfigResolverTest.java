@@ -12,8 +12,7 @@ import java.nio.file.Path;
 import java.util.Map;
 import java.util.Properties;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Unit tests for {@link TargetConfigResolver}.
@@ -239,11 +238,23 @@ class TargetConfigResolverTest {
                 ))
         );
 
-        assertEquals(
-                "Target configuration file does not exist: "
-                        + projectRoot.resolve("config/targets/missing.yml").toAbsolutePath().normalize(),
-                exception.getMessage()
-        );
+        assertTrue(exception.getMessage().contains(
+                "Target configuration file was not found for target: missing."
+        ));
+
+        assertTrue(exception.getMessage().contains(
+                projectRoot.resolve("config/releases/missing/target.yml")
+                        .toAbsolutePath()
+                        .normalize()
+                        .toString()
+        ));
+
+        assertTrue(exception.getMessage().contains(
+                projectRoot.resolve("config/targets/missing.yml")
+                        .toAbsolutePath()
+                        .normalize()
+                        .toString()
+        ));
     }
 
     /**
