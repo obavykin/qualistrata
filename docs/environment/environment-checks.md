@@ -243,6 +243,189 @@ Major version validation is useful when a broader baseline is acceptable.
 
 If the expected OS profile is missing, the check returns `SKIPPED`.
 
+## Environment Value Matchers
+
+QualiStrata provides generic value matchers for comparing detected environment values with expected baselines.
+
+Value matchers are located in `qualistrata-core` and are independent from Unix, API, DB, UI, or any consuming project.
+
+Available matchers:
+
+```text
+EnvironmentValueMatcher.exact(...)
+EnvironmentValueMatcher.exactIgnoreCase(...)
+EnvironmentValueMatcher.contains(...)
+EnvironmentValueMatcher.containsIgnoreCase(...)
+EnvironmentValueMatcher.regex(...)
+```
+
+Examples:
+
+```text
+EnvironmentValueMatcher.exact("Python 3.9.18")
+EnvironmentValueMatcher.contains("Python 3.9")
+EnvironmentValueMatcher.regex("Python\\s+3\\.9\\.\\d+")
+```
+
+Matchers return `EnvironmentValueMatchResult`, which contains:
+
+```text
+matched
+expected
+actual
+message
+```
+
+These matchers are useful for component version checks, command output checks, API response validation, DB value checks, and other readiness validations.
+
+## Unix Component Checks
+
+`UnixComponentEnvironmentCheck` is a generic command-based component readiness check.
+
+It executes a Unix command through `UnixFacade`, extracts an actual value from the command output, and validates it with an `EnvironmentValueMatcher`.
+
+The check is component-neutral. QualiStrata does not know whether the component is Python, Java, Apache, Oracle, Node, or anything else.
+
+A consuming project defines:
+
+```text
+component name
+host alias
+optional user alias
+detection command
+output source
+expected matcher
+severity
+```
+
+Basic example:
+
+```text
+try (UnixFacade unix = UnixFacade.pooled(targetConfig)) {
+    UnixComponentEnvironmentCheck check = new UnixComponentEnvironmentCheck(
+            unix,
+            "unix.app.python",
+            "Unix app Python",
+            EnvironmentCheckSeverity.ERROR,
+            "app",
+            "python",
+            "python3 --version",
+            Duration.ofSeconds(5),
+            EnvironmentValueMatcher.contains("Python 3.9")
+    );
+
+    EnvironmentCheckResult result = check.check();
+}
+```
+
+If the command exits with code `0`, the selected output is matched against the expected value.
+
+If the command exits with a non-zero code, the check returns a failed result.
+
+### Output Source
+
+Different tools print version information to different streams.
+
+For example, `python3 --version` usually prints to stdout, while `java -version` often prints to stderr.
+
+`UnixComponentOutputSource` controls which command output is used as the actual value:
+
+```text
+STDOUT
+STDERR
+STDOUT_THEN_STDERR
+COMBINED
+```
+
+Example for Java:
+
+```text
+try (UnixFacade unix = UnixFacade.pooled(targetConfig)) {
+    UnixComponentEnvironmentCheck check = new UnixComponentEnvironmentCheck(
+            unix,
+            "unix.app.java",
+            "Unix app Java",
+            EnvironmentCheckSeverity.ERROR,
+            "app",
+            null,
+            "java",
+            "java -version",
+            Duration.ofSeconds(5),
+            EnvironmentValueMatcher.contains("21.0"),
+            UnixComponentOutputSource.STDERR
+    );
+
+    EnvironmentCheckResult result = check.check();
+}
+```
+
+Example using regex:
+
+```text
+try (UnixFacade unix = UnixFacade.pooled(targetConfig)) {
+    UnixComponentEnvironmentCheck check = new UnixComponentEnvironmentCheck(
+            unix,
+            "unix.app.python",
+            "Unix app Python",
+            EnvironmentCheckSeverity.ERROR,
+            "app",
+            "python",
+            "python3 --version",
+            Duration.ofSeconds(5),
+            EnvironmentValueMatcher.regex("Python\\s+3\\.9\\.\\d+")
+    );
+
+    EnvironmentCheckResult result = check.check();
+}
+```
+
+### Explicit User Alias
+
+A component check may use an explicit user alias when component detection must be executed under a specific Unix account.
+
+```text
+try (UnixFacade unix = UnixFacade.pooled(targetConfig)) {
+    UnixComponentEnvironmentCheck check = new UnixComponentEnvironmentCheck(
+            unix,
+            "unix.app.oracle-user",
+            "Unix app Oracle user",
+            EnvironmentCheckSeverity.ERROR,
+            "app",
+            "oracle",
+            "oracle",
+            "whoami",
+            Duration.ofSeconds(5),
+            EnvironmentValueMatcher.exact("oracle"),
+            UnixComponentOutputSource.STDOUT
+    );
+
+    EnvironmentCheckResult result = check.check();
+}
+```
+
+Project-specific Oracle or database client checks may build on this generic mechanism, but QualiStrata itself should not contain product-specific Oracle setup logic.
+
+### Diagnostics
+
+`UnixComponentEnvironmentCheck` adds diagnostic details to the result:
+
+```text
+hostAlias
+userAlias
+componentName
+command
+outputSource
+exitCode
+stdout
+stderr
+expected
+actual
+matched
+exceptionType
+```
+
+These details are included in the generic JSON and HTML reports.
+
 ## Running a Readiness Suite
 
 A typical readiness suite combines multiple checks.
@@ -278,6 +461,21 @@ try (UnixFacade unix = UnixFacade.pooled(targetConfig)) {
                                     "app",
                                     new UnixOperatingSystemProfile("rhel", 9, "9.5"),
                                     Duration.ofSeconds(5)
+                            )
+                    ),
+                    EnvironmentCheckDefinition.error(
+                            "unix.app.python",
+                            "Unix app Python",
+                            new UnixComponentEnvironmentCheck(
+                                    unix,
+                                    "unix.app.python",
+                                    "Unix app Python",
+                                    EnvironmentCheckSeverity.ERROR,
+                                    "app",
+                                    "python",
+                                    "python3 --version",
+                                    Duration.ofSeconds(5),
+                                    EnvironmentValueMatcher.contains("Python 3.9")
                             )
                     )
             )

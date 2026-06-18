@@ -51,3 +51,4 @@ The project follows a simple chronological changelog format during early develop
 - Documentation for environment checks, Unix readiness checks, and generic report writers;
 - Generic environment value matchers for exact, contains, and regex-based baseline validation;
 - Generic Unix component environment check using command output and environment value matchers;
+- Documentation for Unix component environment checks and environment value matchers;
