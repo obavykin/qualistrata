@@ -49,3 +49,4 @@ The project follows a simple chronological changelog format during early develop
 - Documentation for Unix command environment checks and readiness suite usage;
 - Unix operating system environment check based on `/etc/os-release`;
 - Documentation for environment checks, Unix readiness checks, and generic report writers;
+- Generic environment value matchers for exact, contains, and regex-based baseline validation;

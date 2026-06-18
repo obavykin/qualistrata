@@ -104,7 +104,7 @@ Project-specific validation, credential checks, connectivity checks, and client/
 
 Typical usage:
 
-```java
+```text
 import com.bavykin.qualistrata.core.config.model.ResolvedTarget;
 import com.bavykin.qualistrata.core.contracts.unix.dto.CommandResult;
 import com.bavykin.qualistrata.unix.facade.UnixFacade;
