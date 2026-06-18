@@ -4,7 +4,7 @@ import com.bavykin.qualistrata.core.contracts.unix.dto.CommandResult;
 import com.bavykin.qualistrata.unix.environment.detector.UnixComponentDetectionResult;
 import com.bavykin.qualistrata.unix.environment.detector.UnixComponentDetectorException;
 import com.bavykin.qualistrata.unix.environment.detector.UnixComponentDetectionRequest;
-import com.bavykin.qualistrata.unix.environment.detector.UnixShellProfileCommandBuilder;
+import com.bavykin.qualistrata.unix.command.UnixShellProfileCommandBuilder;
 import com.bavykin.qualistrata.unix.facade.UnixFacade;
 
 import java.time.Duration;

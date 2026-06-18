@@ -96,7 +96,7 @@ class PythonPackageVersionDetectorTest {
         );
 
         assertEquals(
-                ". '/opt/app/.profile' && python3 -c \"import importlib.metadata as m; print(m.version('Django'))\"",
+                ". '/opt/app/.profile' >/dev/null 2>&1 && python3 -c \"import importlib.metadata as m; print(m.version('Django'))\"",
                 unix.lastCommandRequest().command()
         );
     }

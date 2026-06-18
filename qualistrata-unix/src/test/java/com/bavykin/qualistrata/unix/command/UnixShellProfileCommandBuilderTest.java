@@ -1,5 +1,6 @@
-package com.bavykin.qualistrata.unix.environment.detector;
+package com.bavykin.qualistrata.unix.command;
 
+import com.bavykin.qualistrata.unix.session.UnixSessionException;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -27,13 +28,34 @@ class UnixShellProfileCommandBuilderTest {
     }
 
     @Test
-    void shouldSourceProfileBeforeCommand() {
+    void shouldSourceProfileBeforeCommandAndRedirectProfileOutput() {
+        String command = builder.build(
+                "sqlplus -v",
+                "/home/oracle/.profile"
+        );
+
+        assertEquals(". '/home/oracle/.profile' >/dev/null 2>&1 && sqlplus -v", command);
+    }
+
+    @Test
+    void shouldTrimProfilePath() {
+        String command = builder.build(
+                "cat /etc/os-release",
+                "  /opt/app/.profile  "
+        );
+
+        assertEquals(". '/opt/app/.profile' >/dev/null 2>&1 && cat /etc/os-release", command);
+    }
+
+    @Test
+    void shouldUsePosixDotSyntaxInsteadOfSource() {
         String command = builder.build(
                 "python3 --version",
                 "/opt/app/.profile"
         );
 
-        assertEquals(". '/opt/app/.profile' && python3 --version", command);
+        assertEquals(true, command.startsWith(". "));
+        assertEquals(false, command.startsWith("source "));
     }
 
     @Test
@@ -43,16 +65,19 @@ class UnixShellProfileCommandBuilderTest {
                 "/opt/app/profile's/.profile"
         );
 
-        assertEquals(". '/opt/app/profile'\"'\"'s/.profile' && python3 --version", command);
+        assertEquals(
+                ". '/opt/app/profile'\"'\"'s/.profile' >/dev/null 2>&1 && python3 --version",
+                command
+        );
     }
 
     @Test
     void shouldFailWhenCommandIsBlank() {
-        UnixComponentDetectorException exception = assertThrows(
-                UnixComponentDetectorException.class,
+        UnixSessionException exception = assertThrows(
+                UnixSessionException.class,
                 () -> builder.build(" ", "/opt/app/.profile")
         );
 
-        assertEquals("Unix detector command must not be blank.", exception.getMessage());
+        assertEquals("Unix command must not be blank.", exception.getMessage());
     }
 }

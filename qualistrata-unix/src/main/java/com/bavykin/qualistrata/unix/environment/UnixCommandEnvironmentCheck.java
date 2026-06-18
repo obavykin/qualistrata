@@ -5,6 +5,7 @@ import com.bavykin.qualistrata.core.environment.EnvironmentCheck;
 import com.bavykin.qualistrata.core.environment.EnvironmentCheckResult;
 import com.bavykin.qualistrata.core.environment.EnvironmentCheckSeverity;
 import com.bavykin.qualistrata.unix.command.UnixCommandRequest;
+import com.bavykin.qualistrata.unix.command.UnixShellProfileCommandBuilder;
 import com.bavykin.qualistrata.unix.facade.UnixFacade;
 import com.bavykin.qualistrata.unix.session.UnixSessionException;
 
@@ -19,6 +20,11 @@ import java.util.Map;
  * command exit code. Exit code {@code 0} is treated as a passed check. Any
  * non-zero exit code is treated as a failed environment check result.</p>
  *
+ * <p>The check can optionally source a Unix shell profile before executing the
+ * command. This is useful for non-interactive SSH sessions where PATH,
+ * ORACLE_HOME, LD_LIBRARY_PATH, or other environment variables are initialized
+ * by a project/user-specific profile.</p>
+ *
  * <p>Infrastructure-level exceptions are converted into failed check results.
  * This keeps environment readiness reporting consistent and prevents expected
  * environment issues from escaping as raw framework exceptions.</p>
@@ -31,7 +37,9 @@ public class UnixCommandEnvironmentCheck implements EnvironmentCheck {
     private final EnvironmentCheckSeverity severity;
     private final String hostAlias;
     private final String userAlias;
+    private final String shellProfile;
     private final UnixCommandRequest commandRequest;
+    private final UnixCommandRequest effectiveCommandRequest;
 
     /**
      * Creates a Unix command environment check using the host default user.
@@ -59,6 +67,7 @@ public class UnixCommandEnvironmentCheck implements EnvironmentCheck {
                 name,
                 severity,
                 hostAlias,
+                null,
                 null,
                 new UnixCommandRequest(
                         command,
@@ -96,6 +105,7 @@ public class UnixCommandEnvironmentCheck implements EnvironmentCheck {
                 severity,
                 hostAlias,
                 userAlias,
+                null,
                 new UnixCommandRequest(
                         command,
                         timeout
@@ -121,6 +131,47 @@ public class UnixCommandEnvironmentCheck implements EnvironmentCheck {
             EnvironmentCheckSeverity severity,
             String hostAlias,
             String userAlias,
+            UnixCommandRequest commandRequest
+    ) {
+        this(
+                unix,
+                id,
+                name,
+                severity,
+                hostAlias,
+                userAlias,
+                null,
+                commandRequest
+        );
+    }
+
+    /**
+     * Creates a shell-profile-aware Unix command environment check.
+     *
+     * <p>This constructor is intentionally the only profile-aware constructor
+     * for generic command checks. A shorter overload with raw {@code command}
+     * and {@code shellProfile} would conflict with the existing explicit-user
+     * constructor because Java method signatures do not include parameter
+     * names.</p>
+     *
+     * @param unix Unix facade used to execute the command.
+     * @param id stable check identifier.
+     * @param name human-readable check name.
+     * @param severity check severity when the command fails.
+     * @param hostAlias logical Unix host alias.
+     * @param userAlias optional user alias.
+     * @param shellProfile optional Unix shell profile to source before command
+     *                     execution.
+     * @param commandRequest command execution request.
+     */
+    public UnixCommandEnvironmentCheck(
+            UnixFacade unix,
+            String id,
+            String name,
+            EnvironmentCheckSeverity severity,
+            String hostAlias,
+            String userAlias,
+            String shellProfile,
             UnixCommandRequest commandRequest
     ) {
         if (unix == null) {
@@ -152,8 +203,10 @@ public class UnixCommandEnvironmentCheck implements EnvironmentCheck {
         this.name = name.trim();
         this.severity = severity;
         this.hostAlias = hostAlias.trim();
-        this.userAlias = normalizeUserAlias(userAlias);
+        this.userAlias = normalizeOptionalValue(userAlias);
+        this.shellProfile = normalizeOptionalValue(shellProfile);
         this.commandRequest = commandRequest;
+        this.effectiveCommandRequest = effectiveCommandRequest(commandRequest, this.shellProfile);
     }
 
     /**
@@ -188,22 +241,17 @@ public class UnixCommandEnvironmentCheck implements EnvironmentCheck {
                     null
             );
         } catch (RuntimeException exception) {
+            Map<String, String> details = baseDetails();
+
+            details.put("exceptionType", exception.getClass().getName());
+
             return EnvironmentCheckResult.failed(
                     id,
                     name,
                     severity,
                     "Unix command environment check failed with exception: " + exception.getMessage(),
                     elapsedSince(startNanos),
-                    Map.of(
-                            "hostAlias",
-                            hostAlias,
-                            "userAlias",
-                            userAlias == null ? "" : userAlias,
-                            "command",
-                            commandRequest.command(),
-                            "exceptionType",
-                            exception.getClass().getName()
-                    ),
+                    details,
                     exception
             );
         }
@@ -216,10 +264,10 @@ public class UnixCommandEnvironmentCheck implements EnvironmentCheck {
      */
     private CommandResult executeCommand() {
         if (userAlias == null) {
-            return unix.execute(hostAlias, commandRequest);
+            return unix.execute(hostAlias, effectiveCommandRequest);
         }
 
-        return unix.execute(hostAlias, userAlias, commandRequest);
+        return unix.execute(hostAlias, userAlias, effectiveCommandRequest);
     }
 
     /**
@@ -229,11 +277,8 @@ public class UnixCommandEnvironmentCheck implements EnvironmentCheck {
      * @return diagnostic details.
      */
     private Map<String, String> details(CommandResult result) {
-        Map<String, String> details = new LinkedHashMap<>();
+        Map<String, String> details = baseDetails();
 
-        details.put("hostAlias", hostAlias);
-        details.put("userAlias", userAlias == null ? "" : userAlias);
-        details.put("command", commandRequest.command());
         details.put("exitCode", String.valueOf(result.exitCode()));
         details.put("stdout", nullToEmpty(result.stdout()));
         details.put("stderr", nullToEmpty(result.stderr()));
@@ -242,12 +287,48 @@ public class UnixCommandEnvironmentCheck implements EnvironmentCheck {
     }
 
     /**
-     * Normalizes optional user alias.
+     * Builds common diagnostic details.
      *
-     * @param value optional user alias.
-     * @return trimmed user alias, or {@code null} when blank.
+     * @return diagnostic details.
      */
-    private String normalizeUserAlias(String value) {
+    private Map<String, String> baseDetails() {
+        Map<String, String> details = new LinkedHashMap<>();
+
+        details.put("hostAlias", hostAlias);
+        details.put("userAlias", userAlias == null ? "" : userAlias);
+        details.put("shellProfile", shellProfile == null ? "" : shellProfile);
+        details.put("command", effectiveCommandRequest.command());
+        details.put("rawCommand", commandRequest.command());
+
+        return details;
+    }
+
+    /**
+     * Builds an effective command request with optional shell profile wrapping.
+     *
+     * @param commandRequest original command request.
+     * @param shellProfile optional shell profile.
+     * @return effective command request.
+     */
+    private UnixCommandRequest effectiveCommandRequest(
+            UnixCommandRequest commandRequest,
+            String shellProfile
+    ) {
+        UnixShellProfileCommandBuilder builder = new UnixShellProfileCommandBuilder();
+
+        return new UnixCommandRequest(
+                builder.build(commandRequest.command(), shellProfile),
+                commandRequest.timeout()
+        );
+    }
+
+    /**
+     * Normalizes optional string value.
+     *
+     * @param value optional value.
+     * @return trimmed value, or {@code null} when blank.
+     */
+    private String normalizeOptionalValue(String value) {
         if (value == null || value.isBlank()) {
             return null;
         }

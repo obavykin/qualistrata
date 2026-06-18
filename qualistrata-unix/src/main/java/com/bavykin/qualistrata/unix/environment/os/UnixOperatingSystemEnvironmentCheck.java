@@ -6,6 +6,8 @@ import com.bavykin.qualistrata.core.environment.EnvironmentCheck;
 import com.bavykin.qualistrata.core.environment.EnvironmentCheckResult;
 import com.bavykin.qualistrata.core.environment.EnvironmentCheckSeverity;
 import com.bavykin.qualistrata.core.environment.EnvironmentCheckStatus;
+import com.bavykin.qualistrata.unix.command.UnixCommandRequest;
+import com.bavykin.qualistrata.unix.command.UnixShellProfileCommandBuilder;
 import com.bavykin.qualistrata.unix.facade.UnixFacade;
 import com.bavykin.qualistrata.unix.session.UnixSessionException;
 
@@ -23,6 +25,10 @@ import java.util.Map;
  * configured. Exact {@code VERSION_ID} validation and major-version validation
  * can be used independently or together. Consuming projects decide how strict
  * the OS baseline should be.</p>
+ *
+ * <p>The check can optionally source a Unix shell profile before executing the
+ * OS detection command. This keeps OS checks consistent with other Unix
+ * environment checks that may depend on non-interactive shell initialization.</p>
  */
 public class UnixOperatingSystemEnvironmentCheck implements EnvironmentCheck {
 
@@ -35,8 +41,10 @@ public class UnixOperatingSystemEnvironmentCheck implements EnvironmentCheck {
     private final EnvironmentCheckSeverity severity;
     private final String hostAlias;
     private final String userAlias;
+    private final String shellProfile;
     private final UnixOperatingSystemProfile expected;
     private final Duration timeout;
+    private final String effectiveCommand;
 
     /**
      * Creates a Unix operating system environment check using the host default
@@ -66,6 +74,7 @@ public class UnixOperatingSystemEnvironmentCheck implements EnvironmentCheck {
                 name,
                 severity,
                 hostAlias,
+                null,
                 null,
                 expected,
                 timeout
@@ -103,6 +112,46 @@ public class UnixOperatingSystemEnvironmentCheck implements EnvironmentCheck {
                 severity,
                 hostAlias,
                 userAlias,
+                null,
+                expected,
+                timeout
+        );
+    }
+
+    /**
+     * Creates a shell-profile-aware Unix operating system environment check.
+     *
+     * @param unix Unix facade used to execute the OS detection command.
+     * @param id stable check identifier.
+     * @param name human-readable check name.
+     * @param severity check severity when validation fails.
+     * @param hostAlias logical Unix host alias.
+     * @param userAlias optional user alias.
+     * @param shellProfile optional Unix shell profile to source before command
+     *                     execution.
+     * @param expected expected OS baseline; {@code null} means skipped check.
+     * @param timeout command timeout.
+     */
+    public UnixOperatingSystemEnvironmentCheck(
+            UnixFacade unix,
+            String id,
+            String name,
+            EnvironmentCheckSeverity severity,
+            String hostAlias,
+            String userAlias,
+            String shellProfile,
+            UnixOperatingSystemProfile expected,
+            Duration timeout
+    ) {
+        this(
+                unix,
+                new OsReleaseParser(),
+                id,
+                name,
+                severity,
+                hostAlias,
+                userAlias,
+                shellProfile,
                 expected,
                 timeout
         );
@@ -129,6 +178,47 @@ public class UnixOperatingSystemEnvironmentCheck implements EnvironmentCheck {
             EnvironmentCheckSeverity severity,
             String hostAlias,
             String userAlias,
+            UnixOperatingSystemProfile expected,
+            Duration timeout
+    ) {
+        this(
+                unix,
+                parser,
+                id,
+                name,
+                severity,
+                hostAlias,
+                userAlias,
+                null,
+                expected,
+                timeout
+        );
+    }
+
+    /**
+     * Creates a shell-profile-aware Unix operating system environment check.
+     *
+     * @param unix Unix facade used to execute the OS detection command.
+     * @param parser OS release parser.
+     * @param id stable check identifier.
+     * @param name human-readable check name.
+     * @param severity check severity when validation fails.
+     * @param hostAlias logical Unix host alias.
+     * @param userAlias optional user alias.
+     * @param shellProfile optional Unix shell profile to source before command
+     *                     execution.
+     * @param expected expected OS baseline; {@code null} means skipped check.
+     * @param timeout command timeout.
+     */
+    public UnixOperatingSystemEnvironmentCheck(
+            UnixFacade unix,
+            OsReleaseParser parser,
+            String id,
+            String name,
+            EnvironmentCheckSeverity severity,
+            String hostAlias,
+            String userAlias,
+            String shellProfile,
             UnixOperatingSystemProfile expected,
             Duration timeout
     ) {
@@ -162,9 +252,12 @@ public class UnixOperatingSystemEnvironmentCheck implements EnvironmentCheck {
         this.name = name.trim();
         this.severity = severity;
         this.hostAlias = hostAlias.trim();
-        this.userAlias = normalizeUserAlias(userAlias);
+        this.userAlias = normalizeOptionalValue(userAlias);
+        this.shellProfile = normalizeOptionalValue(shellProfile);
         this.expected = expected;
         this.timeout = timeout;
+        this.effectiveCommand = new UnixShellProfileCommandBuilder()
+                .build(OS_RELEASE_COMMAND, this.shellProfile);
     }
 
     /**
@@ -201,16 +294,18 @@ public class UnixOperatingSystemEnvironmentCheck implements EnvironmentCheck {
     }
 
     /**
-     * Executes {@code cat /etc/os-release} through the Unix facade.
+     * Executes the effective OS release command through the Unix facade.
      *
      * @return command execution result.
      */
     private CommandResult executeOsReleaseCommand() {
+        UnixCommandRequest request = new UnixCommandRequest(effectiveCommand, timeout);
+
         if (userAlias == null) {
-            return unix.execute(hostAlias, OS_RELEASE_COMMAND, timeout);
+            return unix.execute(hostAlias, request);
         }
 
-        return unix.execute(hostAlias, userAlias, OS_RELEASE_COMMAND, timeout);
+        return unix.execute(hostAlias, userAlias, request);
     }
 
     /**
@@ -405,7 +500,9 @@ public class UnixOperatingSystemEnvironmentCheck implements EnvironmentCheck {
 
         details.put("hostAlias", hostAlias);
         details.put("userAlias", userAlias == null ? "" : userAlias);
-        details.put("command", OS_RELEASE_COMMAND);
+        details.put("shellProfile", shellProfile == null ? "" : shellProfile);
+        details.put("command", effectiveCommand);
+        details.put("rawCommand", OS_RELEASE_COMMAND);
         details.put("expectedId", expected == null ? "" : nullToEmpty(expected.id()));
         details.put("expectedVersionId", expected == null ? "" : nullToEmpty(expected.versionId()));
         details.put("expectedMajor", expected == null || expected.major() == null ? "" : String.valueOf(expected.major()));
@@ -439,12 +536,12 @@ public class UnixOperatingSystemEnvironmentCheck implements EnvironmentCheck {
     }
 
     /**
-     * Normalizes optional user alias.
+     * Normalizes optional string value.
      *
-     * @param value optional user alias.
-     * @return trimmed user alias, or {@code null} when blank.
+     * @param value optional value.
+     * @return trimmed value, or {@code null} when blank.
      */
-    private String normalizeUserAlias(String value) {
+    private String normalizeOptionalValue(String value) {
         if (value == null || value.isBlank()) {
             return null;
         }

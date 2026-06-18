@@ -48,7 +48,9 @@ class UnixCommandEnvironmentCheckTest {
         assertEquals("Unix command environment check passed.", result.message());
         assertEquals("app", result.details().get("hostAlias"));
         assertEquals("", result.details().get("userAlias"));
+        assertEquals("", result.details().get("shellProfile"));
         assertEquals("hostname", result.details().get("command"));
+        assertEquals("hostname", result.details().get("rawCommand"));
         assertEquals("0", result.details().get("exitCode"));
         assertEquals("ok", result.details().get("stdout"));
         assertEquals("", result.details().get("stderr"));
@@ -100,6 +102,98 @@ class UnixCommandEnvironmentCheckTest {
         assertEquals("oracle", unix.lastUserAlias());
         assertEquals("whoami", unix.lastCommandRequest().command());
         assertEquals("oracle", result.details().get("userAlias"));
+        assertEquals("", result.details().get("shellProfile"));
+    }
+
+    @Test
+    void shouldExecuteRawCommandWhenShellProfileIsMissing() {
+        RecordingUnixFacade unix = new RecordingUnixFacade(new CommandResult(0, "ok", ""));
+
+        UnixCommandEnvironmentCheck check = new UnixCommandEnvironmentCheck(
+                unix,
+                "unix.app.hostname",
+                "Unix app hostname",
+                EnvironmentCheckSeverity.ERROR,
+                "app",
+                null,
+                null,
+                new UnixCommandRequest(
+                        "hostname",
+                        Duration.ofSeconds(5)
+                )
+        );
+
+        EnvironmentCheckResult result = check.check();
+
+        assertEquals(EnvironmentCheckStatus.PASSED, result.status());
+        assertEquals("hostname", unix.lastCommandRequest().command());
+        assertEquals("", result.details().get("shellProfile"));
+        assertEquals("hostname", result.details().get("command"));
+        assertEquals("hostname", result.details().get("rawCommand"));
+    }
+
+    @Test
+    void shouldExecuteCommandThroughShellProfileWhenProvided() {
+        RecordingUnixFacade unix = new RecordingUnixFacade(new CommandResult(0, "ok", ""));
+
+        UnixCommandEnvironmentCheck check = new UnixCommandEnvironmentCheck(
+                unix,
+                "unix.db.sqlplus",
+                "Unix db sqlplus",
+                EnvironmentCheckSeverity.ERROR,
+                "db",
+                null,
+                "/home/oracle/.profile",
+                new UnixCommandRequest(
+                        "sqlplus -v",
+                        Duration.ofSeconds(5)
+                )
+        );
+
+        EnvironmentCheckResult result = check.check();
+
+        assertEquals(EnvironmentCheckStatus.PASSED, result.status());
+        assertEquals(
+                ". '/home/oracle/.profile' >/dev/null 2>&1 && sqlplus -v",
+                unix.lastCommandRequest().command()
+        );
+        assertEquals("/home/oracle/.profile", result.details().get("shellProfile"));
+        assertEquals(
+                ". '/home/oracle/.profile' >/dev/null 2>&1 && sqlplus -v",
+                result.details().get("command")
+        );
+        assertEquals("sqlplus -v", result.details().get("rawCommand"));
+    }
+
+    @Test
+    void shouldExecuteCommandThroughShellProfileWithExplicitUserAlias() {
+        RecordingUnixFacade unix = new RecordingUnixFacade(new CommandResult(0, "oracle", ""));
+
+        UnixCommandEnvironmentCheck check = new UnixCommandEnvironmentCheck(
+                unix,
+                "unix.db.whoami",
+                "Unix db whoami",
+                EnvironmentCheckSeverity.ERROR,
+                "db",
+                "oracle",
+                "/home/oracle/.profile",
+                new UnixCommandRequest(
+                        "whoami",
+                        Duration.ofSeconds(5)
+                )
+        );
+
+        EnvironmentCheckResult result = check.check();
+
+        assertEquals(EnvironmentCheckStatus.PASSED, result.status());
+        assertEquals("db", unix.lastHostAlias());
+        assertEquals("oracle", unix.lastUserAlias());
+        assertEquals(
+                ". '/home/oracle/.profile' >/dev/null 2>&1 && whoami",
+                unix.lastCommandRequest().command()
+        );
+        assertEquals("/home/oracle/.profile", result.details().get("shellProfile"));
+        assertEquals("whoami", result.details().get("rawCommand"));
     }
 
     @Test
@@ -126,6 +220,8 @@ class UnixCommandEnvironmentCheckTest {
                 result.message()
         );
         assertEquals(RuntimeException.class.getName(), result.details().get("exceptionType"));
+        assertEquals("hostname", result.details().get("command"));
+        assertEquals("hostname", result.details().get("rawCommand"));
         assertEquals(error, result.error());
     }
 
@@ -229,6 +325,7 @@ class UnixCommandEnvironmentCheckTest {
                         "Unix app hostname",
                         EnvironmentCheckSeverity.ERROR,
                         "app",
+                        null,
                         null,
                         (UnixCommandRequest) null
                 )

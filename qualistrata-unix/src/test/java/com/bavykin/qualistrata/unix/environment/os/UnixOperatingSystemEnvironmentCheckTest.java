@@ -343,6 +343,64 @@ class UnixOperatingSystemEnvironmentCheckTest {
         assertEquals("Unix host alias must not be blank.", exception.getMessage());
     }
 
+    @Test
+    void shouldExecuteRawOsReleaseCommandWhenShellProfileIsMissing() {
+        RecordingUnixFacade unix = new RecordingUnixFacade(osReleaseResult("rhel", "9.5"));
+
+        UnixOperatingSystemEnvironmentCheck check = new UnixOperatingSystemEnvironmentCheck(
+                unix,
+                "unix.app.os",
+                "Unix app OS",
+                EnvironmentCheckSeverity.ERROR,
+                "app",
+                null,
+                null,
+                new UnixOperatingSystemProfile("rhel", 9, "9.5"),
+                Duration.ofSeconds(5)
+        );
+
+        EnvironmentCheckResult result = check.check();
+
+        assertEquals(EnvironmentCheckStatus.PASSED, result.status());
+        assertEquals("cat /etc/os-release", unix.lastCommandRequest().command());
+        assertEquals("", result.details().get("shellProfile"));
+        assertEquals("cat /etc/os-release", result.details().get("command"));
+        assertEquals("cat /etc/os-release", result.details().get("rawCommand"));
+    }
+
+    @Test
+    void shouldExecuteOsReleaseCommandThroughShellProfileWhenProvided() {
+        RecordingUnixFacade unix = new RecordingUnixFacade(osReleaseResult("rhel", "9.5"));
+
+        UnixOperatingSystemEnvironmentCheck check = new UnixOperatingSystemEnvironmentCheck(
+                unix,
+                "unix.db.os",
+                "Unix db OS",
+                EnvironmentCheckSeverity.ERROR,
+                "db",
+                "oracle",
+                "/home/oracle/.profile",
+                new UnixOperatingSystemProfile("rhel", 9, "9.5"),
+                Duration.ofSeconds(5)
+        );
+
+        EnvironmentCheckResult result = check.check();
+
+        assertEquals(EnvironmentCheckStatus.PASSED, result.status());
+        assertEquals("db", unix.lastHostAlias());
+        assertEquals("oracle", unix.lastUserAlias());
+        assertEquals(
+                ". '/home/oracle/.profile' >/dev/null 2>&1 && cat /etc/os-release",
+                unix.lastCommandRequest().command()
+        );
+        assertEquals("/home/oracle/.profile", result.details().get("shellProfile"));
+        assertEquals(
+                ". '/home/oracle/.profile' >/dev/null 2>&1 && cat /etc/os-release",
+                result.details().get("command")
+        );
+        assertEquals("cat /etc/os-release", result.details().get("rawCommand"));
+    }
+
     /**
      * Creates command result with minimal {@code /etc/os-release} content.
      *

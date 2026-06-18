@@ -96,7 +96,10 @@ class PythonVersionDetectorTest {
                 Duration.ofSeconds(5)
         );
 
-        assertEquals(". '/opt/app/.profile' && python3 --version", unix.lastCommandRequest().command());
+        assertEquals(
+                ". '/opt/app/.profile' >/dev/null 2>&1 && python3 --version",
+                unix.lastCommandRequest().command()
+        );
     }
 
     @Test

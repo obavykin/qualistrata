@@ -113,7 +113,7 @@ class ApacheVersionDetectorTest {
         );
 
         assertEquals(
-                ". '/opt/app/.profile' && httpd -v || apache2 -v",
+                ". '/opt/app/.profile' >/dev/null 2>&1 && httpd -v || apache2 -v",
                 unix.lastCommandRequest().command()
         );
     }
