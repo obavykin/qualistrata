@@ -48,3 +48,4 @@ The project follows a simple chronological changelog format during early develop
 - Unix command environment check for reusable command-based readiness validation;
 - Documentation for Unix command environment checks and readiness suite usage;
 - Unix operating system environment check based on `/etc/os-release`;
+- Documentation for environment checks, Unix readiness checks, and generic report writers;
