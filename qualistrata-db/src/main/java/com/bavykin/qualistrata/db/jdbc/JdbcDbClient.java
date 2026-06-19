@@ -53,6 +53,25 @@ public class JdbcDbClient implements DbClient {
         this.operations = new JdbcOperations(this.config, connection);
     }
 
+    /**
+     * Creates a client around an already prepared JDBC connection.
+     *
+     * <p>This constructor is intentionally package-private. It exists for unit
+     * tests and future internal factories that need to inject a controlled JDBC
+     * connection without exposing connection ownership to consumer projects.</p>
+     *
+     * @param config resolved DB connection configuration.
+     * @param connection JDBC connection owned by this client.
+     */
+    JdbcDbClient(DbConnectionConfig config, Connection connection) {
+        this.config = requireConfig(config);
+        if (connection == null) {
+            throw new DbException(this.config.alias(), this.config.type(), "JDBC connection must not be null.");
+        }
+        this.connection = connection;
+        this.operations = new JdbcOperations(this.config, connection);
+    }
+
     @Override
     public DbRows query(String sql, Object... parameters) {
         ensureOpen();
@@ -85,19 +104,28 @@ public class JdbcDbClient implements DbClient {
         }
 
         boolean previousAutoCommit = readAutoCommit();
+        Throwable originalFailure = null;
         try {
             connection.setAutoCommit(false);
             DbTransaction transaction = new JdbcDbTransaction(config, connection);
             callback.execute(transaction);
             connection.commit();
-        } catch (RuntimeException exception) {
+        } catch (RuntimeException | Error exception) {
+            originalFailure = exception;
             rollbackAfterFailure(exception);
             throw exception;
         } catch (SQLException exception) {
-            rollbackAfterFailure(exception);
-            throw new DbException(config.alias(), config.type(), "DB transaction failed.", exception);
+            DbException transactionFailure = new DbException(
+                    config.alias(),
+                    config.type(),
+                    "DB transaction failed.",
+                    exception
+            );
+            originalFailure = transactionFailure;
+            rollbackAfterFailure(transactionFailure);
+            throw transactionFailure;
         } finally {
-            restoreAutoCommit(previousAutoCommit);
+            restoreAutoCommit(previousAutoCommit, originalFailure);
         }
     }
 
@@ -122,19 +150,33 @@ public class JdbcDbClient implements DbClient {
         }
     }
 
-    private void rollbackAfterFailure(Exception originalFailure) {
+    private void rollbackAfterFailure(Throwable originalFailure) {
         try {
             connection.rollback();
         } catch (SQLException rollbackFailure) {
-            originalFailure.addSuppressed(rollbackFailure);
+            originalFailure.addSuppressed(new DbException(
+                    config.alias(),
+                    config.type(),
+                    "Failed to rollback DB transaction after failure.",
+                    rollbackFailure
+            ));
         }
     }
 
-    private void restoreAutoCommit(boolean previousAutoCommit) {
+    private void restoreAutoCommit(boolean previousAutoCommit, Throwable originalFailure) {
         try {
             connection.setAutoCommit(previousAutoCommit);
         } catch (SQLException exception) {
-            throw new DbException(config.alias(), config.type(), "Failed to restore DB auto-commit mode.", exception);
+            DbException restoreFailure = new DbException(
+                    config.alias(),
+                    config.type(),
+                    "Failed to restore DB auto-commit mode.",
+                    exception
+            );
+            if (originalFailure == null) {
+                throw restoreFailure;
+            }
+            originalFailure.addSuppressed(restoreFailure);
         }
     }
 

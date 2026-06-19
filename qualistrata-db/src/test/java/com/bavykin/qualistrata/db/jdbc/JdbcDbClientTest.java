@@ -7,6 +7,9 @@ import com.bavykin.qualistrata.db.result.DbRow;
 import com.bavykin.qualistrata.db.result.DbRows;
 import org.junit.jupiter.api.Test;
 
+import java.lang.reflect.Proxy;
+import java.sql.Connection;
+import java.sql.SQLException;
 import java.time.Duration;
 import java.util.Map;
 import java.util.UUID;
@@ -123,6 +126,24 @@ class JdbcDbClientTest {
         }
     }
 
+
+    @Test
+    void shouldPreserveOriginalTransactionFailureWhenAutoCommitRestoreFails() {
+        JdbcDbClient client = new JdbcDbClient(defaultConfig(), connectionThatFailsWhenAutoCommitIsRestored());
+
+        RuntimeException failure = assertThrows(
+                RuntimeException.class,
+                () -> client.transaction(tx -> {
+                    throw new RuntimeException("Original transaction failure");
+                })
+        );
+
+        assertEquals("Original transaction failure", failure.getMessage());
+        assertEquals(1, failure.getSuppressed().length);
+        assertInstanceOf(DbException.class, failure.getSuppressed()[0]);
+        assertTrue(failure.getSuppressed()[0].getMessage().contains("Failed to restore DB auto-commit mode."));
+    }
+
     @Test
     void shouldRejectOperationsAfterClose() {
         JdbcDbClient client = newClient();
@@ -148,6 +169,48 @@ class JdbcDbClientTest {
                 Map.of()
         );
         return new JdbcDbClient(config);
+    }
+
+    private DbConnectionConfig defaultConfig() {
+        return new DbConnectionConfig(
+                "test-db",
+                DbType.POSTGRES,
+                null,
+                null,
+                "test",
+                null,
+                "sa",
+                "",
+                "jdbc:h2:mem:test",
+                Duration.ofSeconds(5),
+                Duration.ofSeconds(5),
+                Map.of()
+        );
+    }
+
+    private Connection connectionThatFailsWhenAutoCommitIsRestored() {
+        return (Connection) Proxy.newProxyInstance(
+                Connection.class.getClassLoader(),
+                new Class<?>[]{Connection.class},
+                (proxy, method, args) -> handleConnectionMethod(method.getName(), args)
+        );
+    }
+
+    private Object handleConnectionMethod(String methodName, Object[] args) throws SQLException {
+        return switch (methodName) {
+            case "getAutoCommit" -> true;
+            case "setAutoCommit" -> {
+                boolean requestedAutoCommit = (Boolean) args[0];
+                if (requestedAutoCommit) {
+                    throw new SQLException("Simulated restore failure");
+                }
+                yield null;
+            }
+            case "rollback", "commit", "close" -> null;
+            case "isClosed" -> false;
+            case "toString" -> "connectionThatFailsWhenAutoCommitIsRestored";
+            default -> throw new UnsupportedOperationException("Unexpected Connection method: " + methodName);
+        };
     }
 
     private void createTable(JdbcDbClient client) {
