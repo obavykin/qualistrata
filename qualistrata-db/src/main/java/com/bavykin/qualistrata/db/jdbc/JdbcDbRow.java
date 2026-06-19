@@ -59,91 +59,61 @@ class JdbcDbRow implements DbRow {
     @Override
     public Integer getInteger(String column) {
         Object value = get(column);
-        if (value == null) {
-            return null;
-        }
-        if (value instanceof Number number) {
-            return number.intValue();
-        }
-        if (value instanceof String text) {
-            return Integer.valueOf(text);
-        }
-        throw unsupportedConversion(column, value, "Integer");
+        return switch (value) {
+            case null -> null;
+            case Number number -> number.intValue();
+            case String text -> Integer.valueOf(text);
+            default -> throw unsupportedConversion(column, value, "Integer");
+        };
     }
 
     @Override
     public Long getLong(String column) {
         Object value = get(column);
-        if (value == null) {
-            return null;
-        }
-        if (value instanceof Number number) {
-            return number.longValue();
-        }
-        if (value instanceof String text) {
-            return Long.valueOf(text);
-        }
-        throw unsupportedConversion(column, value, "Long");
+        return switch (value) {
+            case null -> null;
+            case Number number -> number.longValue();
+            case String text -> Long.valueOf(text);
+            default -> throw unsupportedConversion(column, value, "Long");
+        };
     }
 
     @Override
     public Boolean getBoolean(String column) {
         Object value = get(column);
-        if (value == null) {
-            return null;
-        }
-        if (value instanceof Boolean bool) {
-            return bool;
-        }
-        if (value instanceof Number number) {
-            return number.intValue() != 0;
-        }
-        if (value instanceof String text) {
-            return Boolean.valueOf(text);
-        }
-        throw unsupportedConversion(column, value, "Boolean");
+        return switch (value) {
+            case null -> null;
+            case Boolean bool -> bool;
+            case Number number -> number.intValue() != 0;
+            case String text -> Boolean.valueOf(text);
+            default -> throw unsupportedConversion(column, value, "Boolean");
+        };
     }
 
     @Override
     public LocalDate getLocalDate(String column) {
         Object value = get(column);
-        if (value == null) {
-            return null;
-        }
-        if (value instanceof LocalDate localDate) {
-            return localDate;
-        }
-        if (value instanceof Date sqlDate) {
-            return sqlDate.toLocalDate();
-        }
-        if (value instanceof Timestamp timestamp) {
-            return timestamp.toLocalDateTime().toLocalDate();
-        }
-        if (value instanceof LocalDateTime localDateTime) {
-            return localDateTime.toLocalDate();
-        }
-        throw unsupportedConversion(column, value, "LocalDate");
+        return switch (value) {
+            case null -> null;
+            case LocalDate localDate -> localDate;
+            case Date sqlDate -> sqlDate.toLocalDate();
+            case Timestamp timestamp -> timestamp.toLocalDateTime().toLocalDate();
+            case LocalDateTime localDateTime -> localDateTime.toLocalDate();
+            default -> throw unsupportedConversion(column, value, "LocalDate");
+        };
     }
 
     @Override
     public LocalDateTime getLocalDateTime(String column) {
         Object value = get(column);
-        if (value == null) {
-            return null;
-        }
-        if (value instanceof LocalDateTime localDateTime) {
-            return localDateTime;
-        }
-        if (value instanceof Timestamp timestamp) {
-            return timestamp.toLocalDateTime();
-        }
-        if (value instanceof Date sqlDate) {
-            return sqlDate.toLocalDate().atStartOfDay();
-        }
-        if (value instanceof LocalDate localDate) {
-            return localDate.atStartOfDay();
-        }
-        throw unsupportedConversion(column, value, "LocalDateTime");
+        return switch (value) {
+            case null -> null;
+            case LocalDateTime localDateTime -> localDateTime;
+            case Timestamp timestamp -> timestamp.toLocalDateTime();
+            case Date sqlDate -> sqlDate.toLocalDate().atStartOfDay();
+            case LocalDate localDate -> localDate.atStartOfDay();
+            default -> throw unsupportedConversion(column, value, "LocalDateTime");
+        };
     }
 
     /**

@@ -44,7 +44,7 @@ class JdbcDbRows implements DbRows {
         if (rows.size() != 1) {
             throw new DbException("Expected exactly one DB row, but got: " + rows.size());
         }
-        return rows.get(0);
+        return rows.getFirst();
     }
 
     @Override
