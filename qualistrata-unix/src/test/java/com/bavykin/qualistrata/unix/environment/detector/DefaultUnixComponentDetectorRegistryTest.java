@@ -71,10 +71,38 @@ class DefaultUnixComponentDetectorRegistryTest {
         assertEquals("custom", registry.detector("custom").id());
     }
 
+    @Test
+    void shouldReplaceExistingDetectorWhenRegisteringSameId() {
+        DefaultUnixComponentDetectorRegistry registry = new DefaultUnixComponentDetectorRegistry();
+        UnixComponentDetector customDetector = new StubDetector("python");
+
+        registry.register(customDetector);
+
+        assertEquals(customDetector, registry.detector("python"));
+    }
+
     /**
      * Stub detector used to verify custom detector registration.
      */
     private static class StubDetector implements UnixComponentDetector {
+
+        private final String id;
+
+        /**
+         * Creates a stub detector with the default custom id.
+         */
+        private StubDetector() {
+            this("custom");
+        }
+
+        /**
+         * Creates a stub detector.
+         *
+         * @param id detector id.
+         */
+        private StubDetector(String id) {
+            this.id = id;
+        }
 
         /**
          * Returns detector id.
@@ -83,7 +111,7 @@ class DefaultUnixComponentDetectorRegistryTest {
          */
         @Override
         public String id() {
-            return "custom";
+            return id;
         }
 
         /**

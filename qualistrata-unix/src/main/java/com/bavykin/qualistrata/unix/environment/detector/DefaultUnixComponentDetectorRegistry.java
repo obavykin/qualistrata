@@ -29,6 +29,10 @@ public class DefaultUnixComponentDetectorRegistry implements UnixComponentDetect
     /**
      * Registers a detector.
      *
+     * <p>If a detector with the same id already exists, it is replaced. This allows
+     * consumer projects to override built-in detectors with project-specific
+     * implementations.</p>
+     *
      * @param detector detector to register.
      */
     public final void register(UnixComponentDetector detector) {
