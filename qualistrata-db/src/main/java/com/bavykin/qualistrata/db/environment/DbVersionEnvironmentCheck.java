@@ -100,9 +100,9 @@ public class DbVersionEnvironmentCheck {
                     "Database version check",
                     safeAlias(config),
                     safeType(config),
-                    safeMessage("Database version check failed", exception),
+                    SafeDbDiagnostics.failureMessage("Database version check failed"),
                     elapsedSince(startedAt),
-                    Map.of("exceptionType", exception.getClass().getName())
+                    SafeDbDiagnostics.failureDetails(exception)
             );
         }
     }
@@ -117,13 +117,5 @@ public class DbVersionEnvironmentCheck {
 
     private static com.bavykin.qualistrata.db.DbType safeType(DbConnectionConfig config) {
         return config == null ? null : config.type();
-    }
-
-    private static String safeMessage(String prefix, Exception exception) {
-        String message = exception.getMessage();
-        if (message == null || message.isBlank()) {
-            return prefix + ".";
-        }
-        return prefix + ": " + message;
     }
 }

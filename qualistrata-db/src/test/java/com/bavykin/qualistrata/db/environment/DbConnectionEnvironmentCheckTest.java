@@ -1,6 +1,7 @@
 package com.bavykin.qualistrata.db.environment;
 
 import com.bavykin.qualistrata.db.DbType;
+import com.bavykin.qualistrata.db.exception.DbException;
 import com.bavykin.qualistrata.db.provider.DefaultDbProviderRegistry;
 import org.junit.jupiter.api.Test;
 
@@ -65,9 +66,37 @@ class DbConnectionEnvironmentCheckTest {
         assertEquals(DbEnvironmentCheckStatus.FAILED, result.status());
         assertEquals("main", result.dbAlias());
         assertEquals(DbType.POSTGRES, result.dbType());
-        assertTrue(result.message().contains("Database connection check failed"));
+        assertEquals("Database connection check failed.", result.message());
         assertTrue(result.details().containsKey("exceptionType"));
         assertTrue(client.closed());
+    }
+
+    @Test
+    void shouldNotExposeRawExceptionMessageWhenHealthQueryFails() {
+        String sensitiveMessage = "Connection failed for jdbc:postgresql://host:5432/db?password=secret-password";
+        DbEnvironmentCheckTestSupport.FakeClient client =
+                new DbEnvironmentCheckTestSupport.FakeClient(failure(sensitiveMessage));
+        DbEnvironmentCheckTestSupport.FakeProvider provider =
+                new DbEnvironmentCheckTestSupport.FakeProvider(
+                        DbType.POSTGRES,
+                        "SELECT 1",
+                        "SHOW server_version",
+                        client
+                );
+
+        DbConnectionEnvironmentCheck check = new DbConnectionEnvironmentCheck(
+                new DefaultDbProviderRegistry(List.of(provider))
+        );
+
+        DbEnvironmentCheckResult result = check.execute(config());
+
+        assertFalse(result.passed());
+        assertEquals("Database connection check failed.", result.message());
+        assertFalse(result.message().contains("secret-password"));
+        assertFalse(result.message().contains("jdbc:postgresql"));
+        assertFalse(result.details().toString().contains("secret-password"));
+        assertFalse(result.details().toString().contains("jdbc:postgresql"));
+        assertEquals(DbException.class.getName(), result.details().get("exceptionType"));
     }
 
     @Test

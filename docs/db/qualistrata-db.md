@@ -4,7 +4,7 @@
 
 The module is not Oracle-specific and is not limited to environment validation. It provides a reusable API that consumer projects can use from UI, API, performance, integration, smoke, and regression tests.
 
-## Current Scope
+## Current MVP Scope
 
 Implemented capabilities:
 
@@ -18,9 +18,10 @@ Implemented capabilities:
 - generic JDBC implementation;
 - database provider registry;
 - Oracle provider;
-- PostgreSQL provider.
-
-Environment checks are intentionally not part of this increment. They should be implemented on top of the generic DB API and providers.
+- PostgreSQL provider;
+- generic DB connection environment check;
+- generic DB version environment check;
+- safe environment-check diagnostics that do not expose raw driver exception messages.
 
 ## Package Overview
 
@@ -35,6 +36,80 @@ Environment checks are intentionally not part of this increment. They should be 
 | `com.bavykin.qualistrata.db.jdbc` | Generic JDBC implementation. |
 | `com.bavykin.qualistrata.db.oracle` | Oracle provider and Oracle JDBC URL builder. |
 | `com.bavykin.qualistrata.db.postgres` | PostgreSQL provider and PostgreSQL JDBC URL builder. |
+| `com.bavykin.qualistrata.db.environment` | Generic DB environment checks built on top of providers and clients. |
+
+## Basic Usage
+
+Create a connection config:
+
+```text
+DbConnectionConfig config = new DbConnectionConfig(
+        "main",
+        DbType.POSTGRES,
+        "localhost",
+        5432,
+        "reporting",
+        "public",
+        "tester",
+        "<password>",
+        null,
+        Duration.ofSeconds(10),
+        Duration.ofSeconds(30),
+        Map.of()
+);
+```
+
+Create a provider and a client:
+
+```text
+DbProvider provider = new PostgresDbProvider();
+
+try (DbClient db = provider.createClient(config)) {
+    String status = db.queryValue(
+            "SELECT status FROM orders WHERE order_id = ?",
+            String.class,
+            orderId
+    );
+}
+```
+
+Execute an update:
+
+```text
+db.update(
+        "UPDATE users SET role = ? WHERE username = ?",
+        "ADMIN",
+        username
+);
+```
+
+Execute a transaction:
+
+```text
+db.transaction(tx -> {
+    tx.update("INSERT INTO test_customer(id, name) VALUES (?, ?)", id, name);
+    tx.update("INSERT INTO test_account(customer_id, type) VALUES (?, ?)", id, "PREMIUM");
+});
+```
+
+Run a generic connection check:
+
+```text
+DbProviderRegistry registry = new DefaultDbProviderRegistry(List.of(
+        new OracleDbProvider(),
+        new PostgresDbProvider()
+));
+
+DbEnvironmentCheckResult result =
+        new DbConnectionEnvironmentCheck(registry).execute(config);
+```
+
+Run a generic version check:
+
+```text
+DbEnvironmentCheckResult result =
+        new DbVersionEnvironmentCheck(registry).execute(config, "16.3");
+```
 
 ## Provider Model
 
@@ -103,6 +178,19 @@ If `jdbcUrl` is explicitly provided in `DbConnectionConfig`, the provider uses i
 
 Oracle version SQL may need a fallback later if a target Oracle version or privilege model does not expose `version_full`.
 
+## Environment Check Diagnostics
+
+Environment check results are intended to be written into generated reports.
+
+For that reason, failure messages must remain high-level and must not include raw JDBC or driver exception messages. Driver messages may contain connection URLs, usernames, host names, SQL fragments, or other infrastructure details.
+
+Current failure result policy:
+
+- `message` contains only a stable high-level check failure message;
+- `details.exceptionType` contains the exception class name;
+- `details.causeType` may contain the cause class name;
+- raw exception message is not exposed in the result.
+
 ## Security Rules
 
 The module must not expose passwords or secrets in:
@@ -124,8 +212,9 @@ Oracle and PostgreSQL provider tests are unit tests and do not require live data
 
 ## Next Increment
 
-The next logical increment is database environment checks built on top of the generic DB API:
+The next logical increment is guarded database integration tests:
 
-- DB connection health check;
-- DB version check foundation;
-- structured environment check result mapping.
+- Oracle integration check guarded by explicit system properties;
+- PostgreSQL integration check guarded by explicit system properties;
+- skipped by default during normal `build`;
+- no dependency on live DB infrastructure unless explicitly enabled.

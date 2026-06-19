@@ -66,9 +66,9 @@ public class DbConnectionEnvironmentCheck {
                     "Database connection check",
                     safeAlias(config),
                     safeType(config),
-                    safeMessage("Database connection check failed", exception),
+                    SafeDbDiagnostics.failureMessage("Database connection check failed"),
                     elapsedSince(startedAt),
-                    Map.of("exceptionType", exception.getClass().getName())
+                    SafeDbDiagnostics.failureDetails(exception)
             );
         }
     }
@@ -83,13 +83,5 @@ public class DbConnectionEnvironmentCheck {
 
     private static com.bavykin.qualistrata.db.DbType safeType(DbConnectionConfig config) {
         return config == null ? null : config.type();
-    }
-
-    private static String safeMessage(String prefix, Exception exception) {
-        String message = exception.getMessage();
-        if (message == null || message.isBlank()) {
-            return prefix + ".";
-        }
-        return prefix + ": " + message;
     }
 }

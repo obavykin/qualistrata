@@ -1,6 +1,6 @@
 # QualiStrata DB Environment Checks
 
-This increment adds generic database environment checks on top of the `qualistrata-db` API.
+This document describes generic database environment checks built on top of the `qualistrata-db` provider and client API.
 
 ## Scope
 
@@ -12,8 +12,9 @@ Included:
 - `DbEnvironmentCheckStatus`
 - package documentation
 - unit tests with fake providers and fake clients
+- safe failure diagnostics that avoid raw driver exception messages
 
-Excluded from this increment:
+Excluded for now:
 
 - project-specific reporting integration
 - JSON/HTML report writers
@@ -68,3 +69,22 @@ exact baseline mode:
 ```
 
 Advanced matching through `EnvironmentValueMatcher` can be added later.
+
+## Safe Failure Diagnostics
+
+Environment check results are reportable artifacts, so they should not expose raw JDBC driver messages.
+
+Failure results use this policy:
+
+```text
+message:
+  high-level check failure only
+
+details.exceptionType:
+  Java exception class name
+
+details.causeType:
+  Java cause class name when available
+```
+
+The original exception message is intentionally not copied to `message` or `details` because it may include connection URLs, usernames, host names, or other infrastructure details.
