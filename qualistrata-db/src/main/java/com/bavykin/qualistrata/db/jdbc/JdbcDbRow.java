@@ -19,7 +19,7 @@ import java.util.Map;
  * case-insensitive way. This is important because different database engines and
  * JDBC drivers may expose column labels using different case conventions.</p>
  */
-public class JdbcDbRow implements DbRow {
+class JdbcDbRow implements DbRow {
 
     private final Map<String, Object> valuesByOriginalColumn;
     private final Map<String, String> originalColumnByNormalizedColumn;
@@ -32,7 +32,7 @@ public class JdbcDbRow implements DbRow {
      *
      * @param valuesByColumn values keyed by JDBC column label.
      */
-    public JdbcDbRow(Map<String, Object> valuesByColumn) {
+    JdbcDbRow(Map<String, Object> valuesByColumn) {
         if (valuesByColumn == null) {
             throw new DbException("DB row values must not be null.");
         }

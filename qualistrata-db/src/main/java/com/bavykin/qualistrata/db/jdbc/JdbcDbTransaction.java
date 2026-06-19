@@ -13,7 +13,7 @@ import java.sql.Connection;
  * surrounding {@link JdbcDbClient} controls transaction boundaries, commit,
  * rollback, and resource lifecycle.</p>
  */
-public class JdbcDbTransaction implements DbTransaction {
+class JdbcDbTransaction implements DbTransaction {
 
     private final JdbcOperations operations;
 

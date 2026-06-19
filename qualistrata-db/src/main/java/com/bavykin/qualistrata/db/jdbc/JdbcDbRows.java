@@ -13,7 +13,7 @@ import java.util.List;
  * verification queries should be bounded and focused. Streaming can be added
  * later if a real performance need appears.</p>
  */
-public class JdbcDbRows implements DbRows {
+class JdbcDbRows implements DbRows {
 
     private final List<DbRow> rows;
 
@@ -22,7 +22,7 @@ public class JdbcDbRows implements DbRows {
      *
      * @param rows result rows in JDBC order.
      */
-    public JdbcDbRows(List<? extends DbRow> rows) {
+    JdbcDbRows(List<? extends DbRow> rows) {
         if (rows == null) {
             throw new DbException("DB rows collection must not be null.");
         }
