@@ -1,6 +1,7 @@
 package com.bavykin.qualistrata.unix.environment.detector;
 
 import com.bavykin.qualistrata.unix.environment.detector.impl.ApacheVersionDetector;
+import com.bavykin.qualistrata.unix.environment.detector.impl.OracleClientVersionDetector;
 import com.bavykin.qualistrata.unix.environment.detector.impl.PythonPackageVersionDetector;
 import com.bavykin.qualistrata.unix.environment.detector.impl.PythonVersionDetector;
 import org.junit.jupiter.api.Test;
@@ -22,6 +23,7 @@ class DefaultUnixComponentDetectorRegistryTest {
         assertEquals(PythonVersionDetector.ID, registry.detector("python").id());
         assertEquals(PythonPackageVersionDetector.ID, registry.detector("python-package").id());
         assertEquals(ApacheVersionDetector.ID, registry.detector("apache").id());
+        assertEquals(OracleClientVersionDetector.ID, registry.detector("oracle-client").id());
     }
 
     @Test

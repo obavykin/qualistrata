@@ -1,6 +1,7 @@
 package com.bavykin.qualistrata.unix.environment.detector;
 
 import com.bavykin.qualistrata.unix.environment.detector.impl.ApacheVersionDetector;
+import com.bavykin.qualistrata.unix.environment.detector.impl.OracleClientVersionDetector;
 import com.bavykin.qualistrata.unix.environment.detector.impl.PythonPackageVersionDetector;
 import com.bavykin.qualistrata.unix.environment.detector.impl.PythonVersionDetector;
 
@@ -22,6 +23,7 @@ public class DefaultUnixComponentDetectorRegistry implements UnixComponentDetect
         register(new PythonVersionDetector());
         register(new PythonPackageVersionDetector());
         register(new ApacheVersionDetector());
+        register(new OracleClientVersionDetector());
     }
 
     /**

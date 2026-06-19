@@ -116,6 +116,10 @@ public class UnixCommandEnvironmentCheck implements EnvironmentCheck {
     /**
      * Creates a Unix command environment check.
      *
+     * <p>This constructor is kept for backward compatibility with existing
+     * consumers that build {@link UnixCommandRequest} directly and do not use shell
+     * profile wrapping.</p>
+     *
      * @param unix Unix facade used to execute the command.
      * @param id stable check identifier.
      * @param name human-readable check name.
@@ -124,6 +128,7 @@ public class UnixCommandEnvironmentCheck implements EnvironmentCheck {
      * @param userAlias optional user alias.
      * @param commandRequest command execution request.
      */
+    @SuppressWarnings("unused")
     public UnixCommandEnvironmentCheck(
             UnixFacade unix,
             String id,
