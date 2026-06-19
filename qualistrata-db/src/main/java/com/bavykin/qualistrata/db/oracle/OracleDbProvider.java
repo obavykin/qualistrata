@@ -17,6 +17,14 @@ import com.bavykin.qualistrata.db.provider.DbProvider;
  */
 public class OracleDbProvider implements DbProvider {
 
+    private static final String HEALTH_CHECK_SQL = "SELECT 1 FROM dual";
+
+    private static final String DATABASE_VERSION_SQL = """
+            SELECT version_full
+            FROM product_component_version
+            WHERE product LIKE 'Oracle Database%'
+            """;
+
     /**
      * Creates a default Oracle database provider.
      *
@@ -26,14 +34,6 @@ public class OracleDbProvider implements DbProvider {
     public OracleDbProvider() {
         // Default constructor is declared explicitly to keep generated Javadoc clean.
     }
-
-    private static final String HEALTH_CHECK_SQL = "SELECT 1 FROM dual";
-
-    private static final String DATABASE_VERSION_SQL = """
-            SELECT version_full
-            FROM product_component_version
-            WHERE product LIKE 'Oracle Database%'
-            """;
 
     @Override
     public DbType type() {

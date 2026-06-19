@@ -16,6 +16,10 @@ import com.bavykin.qualistrata.db.provider.DbProvider;
  */
 public class PostgresDbProvider implements DbProvider {
 
+    private static final String HEALTH_CHECK_SQL = "SELECT 1";
+
+    private static final String DATABASE_VERSION_SQL = "SHOW server_version";
+
     /**
      * Creates a default PostgreSQL database provider.
      *
@@ -25,10 +29,6 @@ public class PostgresDbProvider implements DbProvider {
     public PostgresDbProvider() {
         // Default constructor is declared explicitly to keep generated Javadoc clean.
     }
-
-    private static final String HEALTH_CHECK_SQL = "SELECT 1";
-
-    private static final String DATABASE_VERSION_SQL = "SHOW server_version";
 
     @Override
     public DbType type() {

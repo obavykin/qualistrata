@@ -52,3 +52,12 @@ The project follows a simple chronological changelog format during early develop
 - Generic environment value matchers for exact, contains, and regex-based baseline validation;
 - Generic Unix component environment check using command output and environment value matchers;
 - Documentation for Unix component environment checks and environment value matchers;
+- Added generic JDBC database client implementation for `qualistrata-db`.
+- Added generic row and row collection mapping for SQL query results.
+- Added scalar query, existence query, update execution, and transaction support.
+- Added Oracle database provider with service-name and legacy SID JDBC URL support.
+- Added PostgreSQL database provider with standard PostgreSQL JDBC URL support.
+- Added provider-level health-check SQL and database-version SQL for Oracle and PostgreSQL.
+- Added JUnit unit tests for JDBC client behavior, row mapping, transactions, and provider URL builders.
+- Added package-level documentation through `package-info.java` files for DB module packages.
+- Added `docs/qualistrata-db.md` describing module scope, package responsibilities, provider model, URL rules, security rules, and testing strategy;
