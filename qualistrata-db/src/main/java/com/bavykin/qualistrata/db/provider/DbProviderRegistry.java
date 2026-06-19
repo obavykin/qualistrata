@@ -22,6 +22,8 @@ public interface DbProviderRegistry {
     DbProvider provider(DbType type);
 
     /**
+     * Returns all currently registered providers.
+     *
      * @return all registered providers.
      */
     Collection<DbProvider> providers();

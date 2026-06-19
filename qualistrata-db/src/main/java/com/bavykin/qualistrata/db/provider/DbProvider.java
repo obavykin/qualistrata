@@ -14,7 +14,11 @@ import com.bavykin.qualistrata.db.config.DbConnectionConfig;
  */
 public interface DbProvider {
 
-    /** @return database engine supported by this provider. */
+    /**
+     * Returns the database engine supported by this provider.
+     *
+     * @return database engine supported by this provider.
+     */
     DbType type();
 
     /**
@@ -26,12 +30,16 @@ public interface DbProvider {
     DbClient createClient(DbConnectionConfig config);
 
     /**
-     * @return SQL used to validate that a connection can execute a simple query.
+     * Returns SQL used to validate that a connection can execute a simple query.
+     *
+     * @return health-check SQL for this database engine.
      */
     String defaultHealthCheckSql();
 
     /**
-     * @return SQL used to retrieve the database server version.
+     * Returns SQL used to retrieve the database server version.
+     *
+     * @return database-version SQL for this database engine.
      */
     String databaseVersionSql();
 }

@@ -11,10 +11,18 @@ import java.util.List;
  */
 public interface DbRows {
 
-    /** @return number of rows in the result. */
+    /**
+     * Returns the number of rows in the query result.
+     *
+     * @return number of rows in the result.
+     */
     int size();
 
-    /** @return {@code true} when the result has no rows. */
+    /**
+     * Indicates whether the query result contains no rows.
+     *
+     * @return {@code true} when the result has no rows.
+     */
     boolean isEmpty();
 
     /**
@@ -29,6 +37,8 @@ public interface DbRows {
     DbRow single();
 
     /**
+     * Returns all result rows as an immutable list.
+     *
      * @return immutable list of all result rows.
      */
     List<DbRow> all();

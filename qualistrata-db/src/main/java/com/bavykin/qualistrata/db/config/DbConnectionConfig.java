@@ -49,6 +49,13 @@ public record DbConnectionConfig(
     private static final Duration DEFAULT_CONNECTION_TIMEOUT = Duration.ofSeconds(30);
     private static final Duration DEFAULT_QUERY_TIMEOUT = Duration.ofSeconds(30);
 
+    /**
+     * Normalizes and validates the immutable DB connection configuration.
+     *
+     * <p>The constructor applies safe defaults for timeouts and copies the
+     * provider-specific properties map so callers cannot mutate configuration
+     * after the record has been created.</p>
+     */
     public DbConnectionConfig {
         alias = requireText(alias, "Database connection alias must not be blank.");
         if (type == null) {
