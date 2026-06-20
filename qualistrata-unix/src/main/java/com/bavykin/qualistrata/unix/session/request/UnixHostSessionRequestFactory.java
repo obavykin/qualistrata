@@ -1,110 +1,101 @@
 package com.bavykin.qualistrata.unix.session.request;
 
+import com.bavykin.qualistrata.core.config.access.AccessResolver;
 import com.bavykin.qualistrata.core.config.model.HostConfig;
-import com.bavykin.qualistrata.core.config.model.TargetConfig;
+import com.bavykin.qualistrata.core.config.model.ResolvedTarget;
+import com.bavykin.qualistrata.core.config.model.UserConfig;
+import com.bavykin.qualistrata.core.exceptions.FrameworkException;
+import com.bavykin.qualistrata.core.config.resolved.ResolvedUnixHostConfig;
 import com.bavykin.qualistrata.unix.session.UnixHostSessionRequest;
 import com.bavykin.qualistrata.unix.session.UnixSessionException;
 
 import java.util.Map;
 
 /**
- * Factory for creating {@link UnixHostSessionRequest} instances from resolved
- * target configuration.
+ * Factory for creating {@link UnixHostSessionRequest} instances from the generic
+ * QualiStrata resource/access model.
  *
- * <p>The factory hides host lookup logic from consuming projects. Consumers only
- * need to know the logical host alias and, optionally, the user alias to use for
- * the session.</p>
- *
- * <p>This class expects an already resolved and merged {@link TargetConfig}.
- * It does not load configuration files, merge secrets, or perform
- * project-specific validation.</p>
+ * <p>The factory resolves Unix resource topology and the selected access
+ * profile through {@link AccessResolver}. It then adapts the resolved runtime
+ * configuration to the lower-level Unix session request model used by the SSH
+ * implementation.</p>
  */
 public class UnixHostSessionRequestFactory {
 
-    private final TargetConfig targetConfig;
+    private final AccessResolver accessResolver;
 
     /**
-     * Creates a Unix host session request factory.
+     * Creates a Unix host session request factory from a resolved target.
      *
-     * @param targetConfig resolved target configuration.
+     * @param resolvedTarget resolved target containing target topology and secrets.
      */
-    public UnixHostSessionRequestFactory(TargetConfig targetConfig) {
-        if (targetConfig == null) {
-            throw new UnixSessionException("Target configuration must not be null.");
+    public UnixHostSessionRequestFactory(ResolvedTarget resolvedTarget) {
+        if (resolvedTarget == null) {
+            throw new UnixSessionException("Resolved target must not be null.");
         }
-
-        this.targetConfig = targetConfig;
+        this.accessResolver = new AccessResolver(resolvedTarget.config(), resolvedTarget.secrets());
     }
 
     /**
-     * Creates a Unix host session request for the given host alias using the
-     * host default user.
+     * Creates a Unix host session request factory with an explicit access resolver.
      *
-     * @param hostAlias logical host alias from target configuration.
-     * @return Unix host session request.
+     * @param accessResolver resolver used to combine Unix resource topology and secrets.
      */
+    public UnixHostSessionRequestFactory(AccessResolver accessResolver) {
+        if (accessResolver == null) {
+            throw new UnixSessionException("Access resolver must not be null.");
+        }
+        this.accessResolver = accessResolver;
+    }
+
+    /** Creates a Unix host session request using the resource default access profile. */
     public UnixHostSessionRequest create(String hostAlias) {
         return create(hostAlias, null);
     }
 
-    /**
-     * Creates a Unix host session request for the given host alias and user
-     * alias.
-     *
-     * <p>When {@code userAlias} is {@code null} or blank, the host default user
-     * will be used by {@link UnixHostSessionRequest}.</p>
-     *
-     * @param hostAlias logical host alias from target configuration.
-     * @param userAlias optional user alias.
-     * @return Unix host session request.
-     */
-    public UnixHostSessionRequest create(String hostAlias, String userAlias) {
+    /** Creates a Unix host session request using an explicit access profile when provided. */
+    public UnixHostSessionRequest create(String hostAlias, String accessAlias) {
         if (hostAlias == null || hostAlias.isBlank()) {
             throw new UnixSessionException("Unix host alias must not be blank.");
         }
 
-        HostConfig host = resolveHost(hostAlias);
+        try {
+            ResolvedUnixHostConfig resolved = accessAlias == null || accessAlias.isBlank()
+                    ? accessResolver.unix(hostAlias)
+                    : accessResolver.unix(hostAlias, accessAlias);
 
-        return new UnixHostSessionRequest(
-                hostAlias.trim(),
-                host,
-                normalizeUserAlias(userAlias)
+            HostConfig host = toSessionHostConfig(resolved);
+
+            return new UnixHostSessionRequest(
+                    resolved.alias(),
+                    host,
+                    resolved.accessAlias()
+            );
+        } catch (FrameworkException exception) {
+            throw new UnixSessionException(exception.getMessage(), exception);
+        }
+    }
+
+    /** Converts resolved access config to the existing Unix session request model. */
+    private HostConfig toSessionHostConfig(ResolvedUnixHostConfig resolved) {
+        String password = resolved.password() == null ? null : resolved.password().value();
+
+        UserConfig user = new UserConfig(
+                resolved.username(),
+                password,
+                resolved.keyPath()
         );
-    }
 
-    /**
-     * Resolves a host configuration by logical alias.
-     *
-     * @param hostAlias logical host alias.
-     * @return host configuration.
-     */
-    private HostConfig resolveHost(String hostAlias) {
-        Map<String, HostConfig> hosts = targetConfig.hosts();
-
-        if (hosts == null || hosts.isEmpty()) {
-            throw new UnixSessionException("Target configuration does not contain Unix hosts.");
-        }
-
-        HostConfig host = hosts.get(hostAlias.trim());
-
-        if (host == null) {
-            throw new UnixSessionException("Unix host alias is not configured: " + hostAlias.trim());
-        }
-
-        return host;
-    }
-
-    /**
-     * Normalizes optional user alias.
-     *
-     * @param userAlias optional user alias.
-     * @return trimmed user alias, or {@code null} when blank.
-     */
-    private String normalizeUserAlias(String userAlias) {
-        if (userAlias == null || userAlias.isBlank()) {
-            return null;
-        }
-
-        return userAlias.trim();
+        return new HostConfig(
+                resolved.role(),
+                resolved.host(),
+                resolved.port(),
+                resolved.accessAlias(),
+                Map.of(resolved.accessAlias(), user),
+                null,
+                null,
+                resolved.pool(),
+                resolved.commandTimeoutSeconds()
+        );
     }
 }

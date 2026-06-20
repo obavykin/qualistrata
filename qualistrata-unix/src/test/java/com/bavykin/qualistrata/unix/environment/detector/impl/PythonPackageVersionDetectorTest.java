@@ -1,6 +1,5 @@
 package com.bavykin.qualistrata.unix.environment.detector.impl;
 
-import com.bavykin.qualistrata.core.config.model.TargetConfig;
 import com.bavykin.qualistrata.core.contracts.unix.dto.CommandResult;
 import com.bavykin.qualistrata.unix.command.UnixCommandRequest;
 import com.bavykin.qualistrata.unix.environment.detector.UnixComponentDetectionRequest;
@@ -11,6 +10,7 @@ import com.bavykin.qualistrata.unix.session.UnixHostSession;
 import com.bavykin.qualistrata.unix.session.UnixHostSessionRequest;
 import com.bavykin.qualistrata.unix.session.UnixSessionProvider;
 import com.bavykin.qualistrata.unix.session.request.UnixHostSessionRequestFactory;
+import com.bavykin.qualistrata.unix.testsupport.UnixTestTargets;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
@@ -270,7 +270,7 @@ class PythonPackageVersionDetectorTest {
          * Creates a no-op request factory.
          */
         private NoOpUnixHostSessionRequestFactory() {
-            super(new TargetConfig("test", Map.of(), null, null, null, null));
+            super(UnixTestTargets.emptyResolvedTarget());
         }
     }
 }

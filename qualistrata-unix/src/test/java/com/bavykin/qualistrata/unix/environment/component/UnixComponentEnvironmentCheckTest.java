@@ -1,6 +1,5 @@
 package com.bavykin.qualistrata.unix.environment.component;
 
-import com.bavykin.qualistrata.core.config.model.TargetConfig;
 import com.bavykin.qualistrata.core.contracts.unix.dto.CommandResult;
 import com.bavykin.qualistrata.core.environment.EnvironmentCheckResult;
 import com.bavykin.qualistrata.core.environment.EnvironmentCheckSeverity;
@@ -13,6 +12,7 @@ import com.bavykin.qualistrata.unix.session.UnixHostSessionRequest;
 import com.bavykin.qualistrata.unix.session.UnixSessionException;
 import com.bavykin.qualistrata.unix.session.UnixSessionProvider;
 import com.bavykin.qualistrata.unix.session.request.UnixHostSessionRequestFactory;
+import com.bavykin.qualistrata.unix.testsupport.UnixTestTargets;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
@@ -553,14 +553,7 @@ class UnixComponentEnvironmentCheckTest {
          * Creates a no-op request factory.
          */
         private NoOpUnixHostSessionRequestFactory() {
-            super(new TargetConfig(
-                    "test",
-                    Map.of(),
-                    null,
-                    null,
-                    null,
-                    null
-            ));
+            super(UnixTestTargets.emptyResolvedTarget());
         }
     }
 }

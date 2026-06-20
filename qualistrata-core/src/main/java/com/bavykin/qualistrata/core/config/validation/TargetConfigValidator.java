@@ -1,276 +1,174 @@
 package com.bavykin.qualistrata.core.config.validation;
 
-import com.bavykin.qualistrata.core.config.model.DBConfig;
-import com.bavykin.qualistrata.core.config.model.HostConfig;
-import com.bavykin.qualistrata.core.config.model.ResolvedTarget;
-import com.bavykin.qualistrata.core.config.model.TargetConfig;
-import com.bavykin.qualistrata.core.config.model.UIConfig;
-import com.bavykin.qualistrata.core.config.model.UnixPoolConfig;
-import com.bavykin.qualistrata.core.config.model.UserConfig;
+import com.bavykin.qualistrata.core.config.model.*;
 import com.bavykin.qualistrata.core.exceptions.FrameworkException;
 
 import java.util.Map;
 
 /**
- * Performs generic structural validation for target configuration.
+ * Performs generic structural validation for target resource topology.
  *
- * <p>The validator checks only reusable framework-level rules. It does not
- * decide which application-specific sections are mandatory, which environment
- * names are allowed, which hosts must exist, or whether credentials are
- * complete for a concrete project.</p>
- *
- * <p>Product-specific validation must be implemented by consuming projects or
- * project-specific integration modules.</p>
+ * <p>The validator checks only reusable framework-level structure. It does not
+ * decide which concrete resource aliases are mandatory for a consumer project,
+ * which target names are allowed, or whether a project-specific baseline should
+ * run.</p>
  */
 public class TargetConfigValidator {
 
-    /**
-     * Creates a target configuration validator.
-     *
-     * <p>The validator is stateless. A single instance can be reused across
-     * multiple configuration resolution operations.</p>
-     */
-    public TargetConfigValidator() {
-    }
-
-    /**
-     * Validates a resolved target.
-     *
-     * @param resolvedTarget resolved target to validate.
-     * @throws FrameworkException if the resolved target is structurally invalid.
-     */
+    /** Validates a resolved target wrapper and its target topology. */
     public void validate(ResolvedTarget resolvedTarget) {
         if (resolvedTarget == null) {
             throw new FrameworkException("Resolved target must not be null.");
         }
-
         requireNotBlank(resolvedTarget.name(), "Resolved target name must not be blank.");
-
         if (resolvedTarget.config() == null) {
             throw new FrameworkException("Resolved target configuration must not be null.");
         }
-
         validate(resolvedTarget.config());
     }
 
-    /**
-     * Validates generic target configuration structure.
-     *
-     * @param config target configuration to validate.
-     * @throws FrameworkException if the configuration is structurally invalid.
-     */
+    /** Validates generic target topology. */
     public void validate(TargetConfig config) {
         if (config == null) {
             throw new FrameworkException("Target configuration must not be null.");
         }
-
         requireNotBlank(config.env(), "Target environment name must not be blank.");
+        if (config.resources() == null) {
+            throw new FrameworkException("Target configuration must contain resources section.");
+        }
 
-        validateUi(config.ui());
-        validateDb(config.db());
-        validateHosts(config.hosts());
+        validateUi(config.resources().ui());
+        validateUnix(config.resources().unix());
+        validateDatabases(config.resources().databases());
+        validateApi(config.resources().api());
+        validateMetrics(config.resources().metrics());
     }
 
-    /**
-     * Validates the optional UI section.
-     *
-     * <p>The UI section itself is not mandatory at core level. However, when it
-     * is present, its base URL must not be blank.</p>
-     *
-     * @param ui UI configuration section.
-     */
-    private void validateUi(UIConfig ui) {
-        if (ui == null) {
+    private void validateUi(Map<String, UiResourceConfig> resources) {
+        if (resources == null) {
             return;
         }
-
-        requireNotBlank(ui.baseUrl(), "UI base URL must not be blank when UI section is configured.");
+        resources.forEach((alias, resource) -> {
+            requireAlias(alias, "UI");
+            if (resource == null) {
+                throw new FrameworkException("UI resource configuration must not be null for alias: " + alias);
+            }
+            requireNotBlank(resource.baseUrl(), "UI base URL must not be blank for alias: " + alias);
+        });
     }
 
-    /**
-     * Validates the optional database section.
-     *
-     * <p>The database section itself is not mandatory at core level. However,
-     * when a database port is provided, it must be positive.</p>
-     *
-     * @param db database configuration section.
-     */
-    private void validateDb(DBConfig db) {
-        if (db == null) {
+    private void validateUnix(Map<String, UnixResourceConfig> resources) {
+        if (resources == null) {
             return;
         }
-
-        requirePositive(db.port(), "Database port must be positive when configured.");
+        resources.forEach((alias, resource) -> {
+            requireAlias(alias, "Unix");
+            if (resource == null) {
+                throw new FrameworkException("Unix resource configuration must not be null for alias: " + alias);
+            }
+            requireNotBlank(resource.host(), "Unix host address must not be blank for alias: " + alias);
+            requirePositive(resource.port(), "Unix host port must be positive for alias: " + alias);
+            requirePositive(resource.commandTimeoutSeconds(), "Unix command timeout must be positive for alias: " + alias);
+            validateUnixPool(alias, resource.pool());
+        });
     }
 
-    /**
-     * Validates optional host definitions.
-     *
-     * @param hosts map of host aliases to host configurations.
-     */
-    private void validateHosts(Map<String, HostConfig> hosts) {
-        if (hosts == null) {
+    private void validateDatabases(Map<String, DatabaseResourceConfig> resources) {
+        if (resources == null) {
             return;
         }
-
-        hosts.forEach(this::validateHost);
+        resources.forEach((alias, resource) -> {
+            requireAlias(alias, "Database");
+            if (resource == null) {
+                throw new FrameworkException("Database resource configuration must not be null for alias: " + alias);
+            }
+            requireNotBlank(resource.type(), "Database type must not be blank for alias: " + alias);
+            requirePositive(resource.port(), "Database port must be positive for alias: " + alias);
+            requirePositive(resource.connectionTimeoutSeconds(), "Database connection timeout must be positive for alias: " + alias);
+            requirePositive(resource.queryTimeoutSeconds(), "Database query timeout must be positive for alias: " + alias);
+            validateDatabaseAddress(alias, resource);
+            validateDatabasePool(alias, resource.pool());
+        });
     }
 
-    /**
-     * Validates a single host definition.
-     *
-     * @param alias logical host alias.
-     * @param host host configuration.
-     */
-    private void validateHost(String alias, HostConfig host) {
-        requireNotBlank(alias, "Host alias must not be blank.");
-
-        if (host == null) {
-            throw new FrameworkException("Host configuration must not be null for alias: " + alias);
-        }
-
-        requireNotBlank(host.host(), "Host address must not be blank for alias: " + alias);
-        requirePositive(host.port(), "Host port must be positive for alias: " + alias);
-
-        validateUsers(alias, host.users());
-        validateDefaultUser(alias, host.defaultUser(), host.users());
-        validatePool(alias, host.pool());
-        requirePositive(host.commandTimeoutSeconds(), "Command timeout must be positive for alias: " + alias);
-    }
-
-    /**
-     * Validates optional user definitions for a host.
-     *
-     * @param hostAlias logical host alias.
-     * @param users map of user aliases to user configurations.
-     */
-    private void validateUsers(String hostAlias, Map<String, UserConfig> users) {
-        if (users == null) {
+    private void validateApi(Map<String, ApiResourceConfig> resources) {
+        if (resources == null) {
             return;
         }
-
-        users.forEach((userAlias, user) -> validateUser(hostAlias, userAlias, user));
+        resources.forEach((alias, resource) -> {
+            requireAlias(alias, "API");
+            if (resource == null) {
+                throw new FrameworkException("API resource configuration must not be null for alias: " + alias);
+            }
+            requireNotBlank(resource.baseUrl(), "API base URL must not be blank for alias: " + alias);
+        });
     }
 
-    /**
-     * Validates a single user definition.
-     *
-     * @param hostAlias logical host alias.
-     * @param userAlias logical user alias.
-     * @param user user configuration.
-     */
-    private void validateUser(String hostAlias, String userAlias, UserConfig user) {
-        requireNotBlank(userAlias, "User alias must not be blank for host alias: " + hostAlias);
-
-        if (user == null) {
-            throw new FrameworkException(
-                    "User configuration must not be null for user alias: "
-                            + userAlias
-                            + " on host alias: "
-                            + hostAlias
-            );
-        }
-
-        requireNotBlank(
-                user.username(),
-                "Username must not be blank for user alias: "
-                        + userAlias
-                        + " on host alias: "
-                        + hostAlias
-        );
-    }
-
-    /**
-     * Validates that the configured default user points to an existing user
-     * definition when users are provided.
-     *
-     * @param hostAlias logical host alias.
-     * @param defaultUser configured default user alias.
-     * @param users map of user aliases to user configurations.
-     */
-    private void validateDefaultUser(
-            String hostAlias,
-            String defaultUser,
-            Map<String, UserConfig> users
-    ) {
-        if (isBlank(defaultUser) || users == null || users.isEmpty()) {
+    private void validateMetrics(Map<String, MetricsResourceConfig> resources) {
+        if (resources == null) {
             return;
         }
-
-        if (!users.containsKey(defaultUser)) {
-            throw new FrameworkException(
-                    "Default user '"
-                            + defaultUser
-                            + "' is not defined for host alias: "
-                            + hostAlias
-            );
-        }
+        resources.forEach((alias, resource) -> {
+            requireAlias(alias, "Metrics");
+            if (resource == null) {
+                throw new FrameworkException("Metrics resource configuration must not be null for alias: " + alias);
+            }
+            if (Boolean.TRUE.equals(resource.enabled())) {
+                requireNotBlank(resource.type(), "Metrics type must not be blank for enabled alias: " + alias);
+                requireNotBlank(resource.url(), "Metrics URL must not be blank for enabled alias: " + alias);
+            }
+        });
     }
 
-    /**
-     * Validates optional Unix connection pool configuration.
-     *
-     * @param hostAlias logical host alias.
-     * @param pool Unix connection pool configuration.
-     */
-    private void validatePool(String hostAlias, UnixPoolConfig pool) {
+    private void validateDatabaseAddress(String alias, DatabaseResourceConfig resource) {
+        boolean hasJdbcUrl = !isBlank(resource.jdbcUrl());
+        if (hasJdbcUrl) {
+            return;
+        }
+        requireNotBlank(resource.host(), "Database host must not be blank for alias: " + alias + " when jdbcUrl is not configured.");
+        requireNotBlank(resource.databaseName(), "Database name must not be blank for alias: " + alias + " when jdbcUrl is not configured.");
+    }
+
+    private void validateUnixPool(String alias, UnixPoolConfig pool) {
         if (pool == null) {
             return;
         }
-
-        requirePositive(pool.size(), "Unix pool size must be positive for host alias: " + hostAlias);
-        requireNonNegative(
-                pool.keepAliveSeconds(),
-                "Unix pool keep-alive seconds must be non-negative for host alias: " + hostAlias
-        );
-        requirePositive(
-                pool.borrowTimeoutSeconds(),
-                "Unix pool borrow timeout seconds must be positive for host alias: " + hostAlias
-        );
+        requirePositive(pool.size(), "Unix pool size must be positive for alias: " + alias);
+        requireNonNegative(pool.keepAliveSeconds(), "Unix pool keep-alive seconds must be non-negative for alias: " + alias);
+        requirePositive(pool.borrowTimeoutSeconds(), "Unix pool borrow timeout seconds must be positive for alias: " + alias);
     }
 
-    /**
-     * Requires a string value to be non-null and non-blank.
-     *
-     * @param value value to check.
-     * @param message exception message.
-     */
+    private void validateDatabasePool(String alias, DatabasePoolConfig pool) {
+        if (pool == null) {
+            return;
+        }
+        requirePositive(pool.size(), "Database pool size must be positive for alias: " + alias);
+        requirePositive(pool.borrowTimeoutSeconds(), "Database pool borrow timeout seconds must be positive for alias: " + alias);
+        requireNonNegative(pool.idleTimeoutSeconds(), "Database pool idle timeout seconds must be non-negative for alias: " + alias);
+    }
+
+    private void requireAlias(String alias, String type) {
+        requireNotBlank(alias, type + " resource alias must not be blank.");
+    }
+
     private void requireNotBlank(String value, String message) {
         if (isBlank(value)) {
             throw new FrameworkException(message);
         }
     }
 
-    /**
-     * Requires an optional integer value to be positive when present.
-     *
-     * @param value value to check.
-     * @param message exception message.
-     */
     private void requirePositive(Integer value, String message) {
         if (value != null && value <= 0) {
             throw new FrameworkException(message);
         }
     }
 
-    /**
-     * Requires an optional integer value to be non-negative when present.
-     *
-     * @param value value to check.
-     * @param message exception message.
-     */
     private void requireNonNegative(Integer value, String message) {
         if (value != null && value < 0) {
             throw new FrameworkException(message);
         }
     }
 
-    /**
-     * Checks whether a string is null, empty, or contains only whitespace.
-     *
-     * @param value value to check.
-     * @return {@code true} when the value is null or blank.
-     */
     private boolean isBlank(String value) {
         return value == null || value.trim().isEmpty();
     }

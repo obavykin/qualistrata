@@ -1,7 +1,7 @@
 package com.bavykin.qualistrata.core.config.resolution;
 
 import com.bavykin.qualistrata.core.config.model.ResolvedTarget;
-import com.bavykin.qualistrata.core.config.model.UserConfig;
+import com.bavykin.qualistrata.core.config.secrets.UnixAccessSecret;
 import com.bavykin.qualistrata.core.config.selection.TargetSelector;
 import com.bavykin.qualistrata.core.exceptions.FrameworkException;
 import org.junit.jupiter.api.Test;
@@ -12,15 +12,17 @@ import java.nio.file.Path;
 import java.util.Map;
 import java.util.Properties;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Unit tests for {@link TargetConfigResolver}.
  *
- * <p>The tests verify the generic layered configuration resolution flow. They
- * intentionally use temporary files and demo target names so that the core
- * module does not depend on repository-level configuration files or
- * product-specific environments.</p>
+ * <p>The tests verify the generic resolution flow where target topology and
+ * access secrets are loaded as separate models. They intentionally use demo
+ * aliases so that core remains reusable for different consumer projects.</p>
  */
 class TargetConfigResolverTest {
 
@@ -33,21 +35,20 @@ class TargetConfigResolverTest {
     void shouldResolveTargetConfigurationFromProjectDefaultAndPublicTargetFile() throws Exception {
         createTargetFile("demo", """
                 env: demo
-                
-                ui:
-                  baseUrl: "https://app.demo.test"
-                
-                api: {}
-                perf: {}
-                
-                db:
-                  host: "db.demo.test"
-                  port: 1521
-                  sid: "DEMO"
-                  service:
-                  username: "demo_user"
-                
-                hosts: {}
+                resources:
+                  ui:
+                    web:
+                      type: web-ui
+                      baseUrl: "https://app.demo.test"
+                      defaultAccess: admin
+                  databases:
+                    main:
+                      type: oracle
+                      host: "db.demo.test"
+                      port: 1521
+                      databaseName: DEMO
+                      connectionMode: sid
+                      defaultAccess: app-db-user
                 """);
 
         ResolvedTarget resolved = resolver.resolve(new TargetConfigResolutionRequest(
@@ -60,18 +61,16 @@ class TargetConfigResolverTest {
 
         assertEquals("demo", resolved.name());
         assertEquals("demo", resolved.config().env());
-        assertEquals("https://app.demo.test", resolved.config().ui().baseUrl());
-        assertEquals("db.demo.test", resolved.config().db().host());
-        assertEquals(1521, resolved.config().db().port());
+        assertEquals("https://app.demo.test", resolved.config().resources().ui().get("web").baseUrl());
+        assertEquals("db.demo.test", resolved.config().resources().databases().get("main").host());
+        assertEquals(1521, resolved.config().resources().databases().get("main").port());
     }
 
     @Test
     void shouldUseSystemPropertyBeforeProjectDefault() throws Exception {
         createTargetFile("from-property", """
                 env: from-property
-                api: {}
-                perf: {}
-                hosts: {}
+                resources: {}
                 """);
 
         Properties properties = new Properties();
@@ -93,36 +92,31 @@ class TargetConfigResolverTest {
     void shouldMergeDefaultAndTargetSpecificSecrets() throws Exception {
         createTargetFile("demo", """
                 env: demo
-                
-                api: {}
-                perf: {}
-                
-                hosts:
-                  app:
-                    role: "application"
-                    host: "app.demo.test"
-                    port: 22
-                    defaultUser: "app"
-                    users:
-                      app:
-                        username: "app"
-                        keyPath: "/home/app/.ssh/id_rsa"
+                resources:
+                  unix:
+                    app:
+                      role: application
+                      host: "app.demo.test"
+                      port: 22
+                      defaultAccess: app-user
                 """);
 
         createFile("config/secrets.yml", """
-                hosts:
-                  app:
-                    users:
-                      app:
-                        password: "default-secret"
+                access:
+                  unix:
+                    app:
+                      app-user:
+                        username: app
+                        password: default-secret
                 """);
 
         createFile("config/secrets/demo.yml", """
-                hosts:
-                  app:
-                    users:
-                      app:
-                        password: "target-secret"
+                access:
+                  unix:
+                    app:
+                      app-user:
+                        username: app
+                        password: target-secret
                 """);
 
         ResolvedTarget resolved = resolver.resolve(new TargetConfigResolutionRequest(
@@ -133,48 +127,41 @@ class TargetConfigResolverTest {
                 null
         ));
 
-        UserConfig user = resolved.config()
-                .hosts()
-                .get("app")
-                .users()
-                .get("app");
+        UnixAccessSecret access = resolved.secrets().access().unix().get("app").get("app-user");
 
-        assertEquals("app", user.username());
-        assertEquals("/home/app/.ssh/id_rsa", user.keyPath());
-        assertEquals("target-secret", user.password());
+        assertEquals("app", access.username());
+        assertEquals("target-secret", access.password());
     }
 
     @Test
     void shouldMergeExplicitSecretsFileAfterConventionalSecrets() throws Exception {
         createTargetFile("demo", """
                 env: demo
-                api: {}
-                perf: {}
-                hosts:
-                  app:
-                    role: "application"
-                    host: "app.demo.test"
-                    port: 22
-                    defaultUser: "app"
-                    users:
-                      app:
-                        username: "app"
+                resources:
+                  unix:
+                    app:
+                      role: application
+                      host: "app.demo.test"
+                      port: 22
+                      defaultAccess: app-user
                 """);
 
         createFile("config/secrets/demo.yml", """
-                hosts:
-                  app:
-                    users:
-                      app:
-                        password: "target-secret"
+                access:
+                  unix:
+                    app:
+                      app-user:
+                        username: app
+                        password: target-secret
                 """);
 
         Path explicitSecrets = createFile("local/explicit-secrets.yml", """
-                hosts:
-                  app:
-                    users:
-                      app:
-                        password: "explicit-secret"
+                access:
+                  unix:
+                    app:
+                      app-user:
+                        username: app
+                        password: explicit-secret
                 """);
 
         ResolvedTarget resolved = resolver.resolve(new TargetConfigResolutionRequest(
@@ -187,7 +174,7 @@ class TargetConfigResolverTest {
 
         assertEquals(
                 "explicit-secret",
-                resolved.config().hosts().get("app").users().get("app").password()
+                resolved.secrets().access().unix().get("app").get("app-user").password()
         );
     }
 
@@ -195,9 +182,7 @@ class TargetConfigResolverTest {
     void shouldSkipMissingOptionalSecretLayers() throws Exception {
         createTargetFile("demo", """
                 env: demo
-                api: {}
-                perf: {}
-                hosts: {}
+                resources: {}
                 """);
 
         ResolvedTarget resolved = resolver.resolve(new TargetConfigResolutionRequest(
@@ -210,6 +195,7 @@ class TargetConfigResolverTest {
 
         assertEquals("demo", resolved.name());
         assertEquals("demo", resolved.config().env());
+        assertNull(resolved.secrets());
     }
 
     @Test
@@ -257,26 +243,12 @@ class TargetConfigResolverTest {
         ));
     }
 
-    /**
-     * Creates a public target configuration file for the given target name.
-     *
-     * @param targetName target name used in the conventional path.
-     * @param content YAML file content.
-     * @return created file path.
-     * @throws Exception if the file cannot be created.
-     */
+    /** Creates a public target configuration file for the given target name. */
     private Path createTargetFile(String targetName, String content) throws Exception {
         return createFile("config/targets/" + targetName + ".yml", content);
     }
 
-    /**
-     * Creates a file under the temporary project root.
-     *
-     * @param relativePath path relative to the temporary project root.
-     * @param content file content.
-     * @return created file path.
-     * @throws Exception if the file cannot be created.
-     */
+    /** Creates a file under the temporary project root. */
     private Path createFile(String relativePath, String content) throws Exception {
         Path file = projectRoot.resolve(relativePath);
 

@@ -1,6 +1,6 @@
 package com.bavykin.qualistrata.unix.facade;
 
-import com.bavykin.qualistrata.core.config.model.TargetConfig;
+import com.bavykin.qualistrata.core.config.model.ResolvedTarget;
 import com.bavykin.qualistrata.core.contracts.unix.dto.CommandResult;
 import com.bavykin.qualistrata.unix.command.UnixCommandRequest;
 import com.bavykin.qualistrata.unix.session.UnixHostSession;
@@ -32,36 +32,36 @@ public class UnixFacade implements AutoCloseable {
     /**
      * Creates a pooled Unix facade backed by the default JSch SSH transport.
      *
-     * @param targetConfig resolved target configuration.
+     * @param resolvedTarget resolved target containing target topology and secrets.
      * @return Unix facade with pooled session provider.
      */
-    public static UnixFacade pooled(TargetConfig targetConfig) {
-        return of(targetConfig, UnixSessionProviderType.POOLED);
+    public static UnixFacade pooled(ResolvedTarget resolvedTarget) {
+        return of(resolvedTarget, UnixSessionProviderType.POOLED);
     }
 
     /**
      * Creates a direct Unix facade backed by the default JSch SSH transport.
      *
-     * @param targetConfig resolved target configuration.
+     * @param resolvedTarget resolved target containing target topology and secrets.
      * @return Unix facade with direct session provider.
      */
-    public static UnixFacade direct(TargetConfig targetConfig) {
-        return of(targetConfig, UnixSessionProviderType.DIRECT);
+    public static UnixFacade direct(ResolvedTarget resolvedTarget) {
+        return of(resolvedTarget, UnixSessionProviderType.DIRECT);
     }
 
     /**
      * Creates a Unix facade backed by the default JSch SSH transport and the
      * requested provider type.
      *
-     * @param targetConfig resolved target configuration.
+     * @param resolvedTarget resolved target containing target topology and secrets.
      * @param providerType Unix session provider type.
      * @return Unix facade.
      */
     public static UnixFacade of(
-            TargetConfig targetConfig,
+            ResolvedTarget resolvedTarget,
             UnixSessionProviderType providerType
     ) {
-        UnixHostSessionRequestFactory requestFactory = new UnixHostSessionRequestFactory(targetConfig);
+        UnixHostSessionRequestFactory requestFactory = new UnixHostSessionRequestFactory(resolvedTarget);
         UnixSessionProvider sessionProvider = new UnixSessionProviderFactory().create(providerType);
 
         return new UnixFacade(sessionProvider, requestFactory);

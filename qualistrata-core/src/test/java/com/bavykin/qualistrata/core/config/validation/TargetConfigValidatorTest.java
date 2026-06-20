@@ -17,9 +17,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 /**
  * Unit tests for {@link TargetConfigValidator}.
  *
- * <p>The tests use YAML files loaded through {@link TargetConfigLoader} to
- * validate the same model shape that consuming projects will receive after
- * configuration loading and resolution.</p>
+ * <p>The tests validate the new generic resource topology structure. Access
+ * secrets are intentionally not validated here because they are resolved later
+ * by the access resolver when a concrete runtime client or session is needed.</p>
  */
 class TargetConfigValidatorTest {
 
@@ -33,9 +33,7 @@ class TargetConfigValidatorTest {
     void shouldAcceptMinimalValidTargetConfiguration() throws Exception {
         TargetConfig config = load("""
                 env: demo
-                api: {}
-                perf: {}
-                hosts: {}
+                resources: {}
                 """);
 
         assertDoesNotThrow(() -> validator.validate(config));
@@ -45,12 +43,10 @@ class TargetConfigValidatorTest {
     void shouldAcceptValidResolvedTarget() throws Exception {
         TargetConfig config = load("""
                 env: demo
-                api: {}
-                perf: {}
-                hosts: {}
+                resources: {}
                 """);
 
-        ResolvedTarget resolvedTarget = new ResolvedTarget("demo", config);
+        ResolvedTarget resolvedTarget = new ResolvedTarget("demo", config, null);
 
         assertDoesNotThrow(() -> validator.validate(resolvedTarget));
     }
@@ -69,14 +65,12 @@ class TargetConfigValidatorTest {
     void shouldFailWhenResolvedTargetNameIsBlank() throws Exception {
         TargetConfig config = load("""
                 env: demo
-                api: {}
-                perf: {}
-                hosts: {}
+                resources: {}
                 """);
 
         FrameworkException exception = assertThrows(
                 FrameworkException.class,
-                () -> validator.validate(new ResolvedTarget("   ", config))
+                () -> validator.validate(new ResolvedTarget("   ", config, null))
         );
 
         assertEquals("Resolved target name must not be blank.", exception.getMessage());
@@ -86,7 +80,7 @@ class TargetConfigValidatorTest {
     void shouldFailWhenResolvedTargetConfigIsNull() {
         FrameworkException exception = assertThrows(
                 FrameworkException.class,
-                () -> validator.validate(new ResolvedTarget("demo", null))
+                () -> validator.validate(new ResolvedTarget("demo", null, null))
         );
 
         assertEquals("Resolved target configuration must not be null.", exception.getMessage());
@@ -106,9 +100,7 @@ class TargetConfigValidatorTest {
     void shouldFailWhenEnvironmentNameIsBlank() throws Exception {
         TargetConfig config = load("""
                 env: " "
-                api: {}
-                perf: {}
-                hosts: {}
+                resources: {}
                 """);
 
         FrameworkException exception = assertThrows(
@@ -120,16 +112,9 @@ class TargetConfigValidatorTest {
     }
 
     @Test
-    void shouldFailWhenUiBaseUrlIsBlank() throws Exception {
+    void shouldFailWhenResourcesSectionIsMissing() throws Exception {
         TargetConfig config = load("""
                 env: demo
-                
-                ui:
-                  baseUrl: " "
-                
-                api: {}
-                perf: {}
-                hosts: {}
                 """);
 
         FrameworkException exception = assertThrows(
@@ -137,25 +122,186 @@ class TargetConfigValidatorTest {
                 () -> validator.validate(config)
         );
 
-        assertEquals(
-                "UI base URL must not be blank when UI section is configured.",
-                exception.getMessage()
+        assertEquals("Target configuration must contain resources section.", exception.getMessage());
+    }
+
+    @Test
+    void shouldFailWhenUiBaseUrlIsBlank() throws Exception {
+        TargetConfig config = load("""
+                env: demo
+                resources:
+                  ui:
+                    web:
+                      type: web-ui
+                      baseUrl: " "
+                """);
+
+        FrameworkException exception = assertThrows(
+                FrameworkException.class,
+                () -> validator.validate(config)
         );
+
+        assertEquals("UI base URL must not be blank for alias: web", exception.getMessage());
+    }
+
+    @Test
+    void shouldFailWhenUnixHostAliasIsBlank() throws Exception {
+        TargetConfig config = load("""
+                env: demo
+                resources:
+                  unix:
+                    " ":
+                      role: application
+                      host: "app.demo.test"
+                      port: 22
+                """);
+
+        FrameworkException exception = assertThrows(
+                FrameworkException.class,
+                () -> validator.validate(config)
+        );
+
+        assertEquals("Unix resource alias must not be blank.", exception.getMessage());
+    }
+
+    @Test
+    void shouldFailWhenUnixHostAddressIsBlank() throws Exception {
+        TargetConfig config = load("""
+                env: demo
+                resources:
+                  unix:
+                    app:
+                      role: application
+                      host: " "
+                      port: 22
+                """);
+
+        FrameworkException exception = assertThrows(
+                FrameworkException.class,
+                () -> validator.validate(config)
+        );
+
+        assertEquals("Unix host address must not be blank for alias: app", exception.getMessage());
+    }
+
+    @Test
+    void shouldFailWhenUnixHostPortIsNotPositive() throws Exception {
+        TargetConfig config = load("""
+                env: demo
+                resources:
+                  unix:
+                    app:
+                      role: application
+                      host: "app.demo.test"
+                      port: -1
+                """);
+
+        FrameworkException exception = assertThrows(
+                FrameworkException.class,
+                () -> validator.validate(config)
+        );
+
+        assertEquals("Unix host port must be positive for alias: app", exception.getMessage());
+    }
+
+    @Test
+    void shouldFailWhenUnixPoolSizeIsNotPositive() throws Exception {
+        TargetConfig config = load("""
+                env: demo
+                resources:
+                  unix:
+                    app:
+                      role: application
+                      host: "app.demo.test"
+                      port: 22
+                      pool:
+                        size: 0
+                """);
+
+        FrameworkException exception = assertThrows(
+                FrameworkException.class,
+                () -> validator.validate(config)
+        );
+
+        assertEquals("Unix pool size must be positive for alias: app", exception.getMessage());
+    }
+
+    @Test
+    void shouldFailWhenUnixPoolKeepAliveIsNegative() throws Exception {
+        TargetConfig config = load("""
+                env: demo
+                resources:
+                  unix:
+                    app:
+                      role: application
+                      host: "app.demo.test"
+                      port: 22
+                      pool:
+                        keepAliveSeconds: -1
+                """);
+
+        FrameworkException exception = assertThrows(
+                FrameworkException.class,
+                () -> validator.validate(config)
+        );
+
+        assertEquals("Unix pool keep-alive seconds must be non-negative for alias: app", exception.getMessage());
+    }
+
+    @Test
+    void shouldFailWhenUnixPoolBorrowTimeoutIsNotPositive() throws Exception {
+        TargetConfig config = load("""
+                env: demo
+                resources:
+                  unix:
+                    app:
+                      role: application
+                      host: "app.demo.test"
+                      port: 22
+                      pool:
+                        borrowTimeoutSeconds: 0
+                """);
+
+        FrameworkException exception = assertThrows(
+                FrameworkException.class,
+                () -> validator.validate(config)
+        );
+
+        assertEquals("Unix pool borrow timeout seconds must be positive for alias: app", exception.getMessage());
+    }
+
+    @Test
+    void shouldFailWhenUnixCommandTimeoutIsNotPositive() throws Exception {
+        TargetConfig config = load("""
+                env: demo
+                resources:
+                  unix:
+                    app:
+                      role: application
+                      host: "app.demo.test"
+                      port: 22
+                      commandTimeoutSeconds: 0
+                """);
+
+        FrameworkException exception = assertThrows(
+                FrameworkException.class,
+                () -> validator.validate(config)
+        );
+
+        assertEquals("Unix command timeout must be positive for alias: app", exception.getMessage());
     }
 
     @Test
     void shouldFailWhenDatabasePortIsNotPositive() throws Exception {
         TargetConfig config = load("""
                 env: demo
-                
-                api: {}
-                perf: {}
-                
-                db:
-                  host: "db.demo.test"
-                  port: 0
-                
-                hosts: {}
+                resources:
+                  databases:
+                    main:
+                      type: oracle
+                      host: "db.demo.test"
+                      port: 0
+                      databaseName: DEMO
                 """);
 
         FrameworkException exception = assertThrows(
@@ -163,38 +309,75 @@ class TargetConfigValidatorTest {
                 () -> validator.validate(config)
         );
 
-        assertEquals("Database port must be positive when configured.", exception.getMessage());
+        assertEquals("Database port must be positive for alias: main", exception.getMessage());
     }
 
     @Test
-    void shouldAcceptHostWithoutUsers() throws Exception {
+    void shouldFailWhenDatabaseTypeIsBlank() throws Exception {
         TargetConfig config = load("""
                 env: demo
-                api: {}
-                perf: {}
-                
-                hosts:
-                  app:
-                    role: "application"
-                    host: "app.demo.test"
-                    port: 22
+                resources:
+                  databases:
+                    main:
+                      type: " "
+                      host: "db.demo.test"
+                      port: 1521
+                      databaseName: DEMO
+                """);
+
+        FrameworkException exception = assertThrows(
+                FrameworkException.class,
+                () -> validator.validate(config)
+        );
+
+        assertEquals("Database type must not be blank for alias: main", exception.getMessage());
+    }
+
+    @Test
+    void shouldFailWhenDatabaseHostIsBlankAndJdbcUrlIsMissing() throws Exception {
+        TargetConfig config = load("""
+                env: demo
+                resources:
+                  databases:
+                    main:
+                      type: oracle
+                      host: " "
+                      port: 1521
+                      databaseName: DEMO
+                """);
+
+        FrameworkException exception = assertThrows(
+                FrameworkException.class,
+                () -> validator.validate(config)
+        );
+
+        assertEquals("Database host must not be blank for alias: main when jdbcUrl is not configured.", exception.getMessage());
+    }
+
+    @Test
+    void shouldAcceptDatabaseWithJdbcUrlWithoutHostAndDatabaseName() throws Exception {
+        TargetConfig config = load("""
+                env: demo
+                resources:
+                  databases:
+                    main:
+                      type: postgresql
+                      jdbcUrl: "jdbc:postgresql://db.demo.test:5432/demo"
                 """);
 
         assertDoesNotThrow(() -> validator.validate(config));
     }
 
     @Test
-    void shouldFailWhenHostAliasIsBlank() throws Exception {
+    void shouldFailWhenEnabledMetricsResourceHasNoUrl() throws Exception {
         TargetConfig config = load("""
                 env: demo
-                api: {}
-                perf: {}
-                
-                hosts:
-                  " ":
-                    role: "application"
-                    host: "app.demo.test"
-                    port: 22
+                resources:
+                  metrics:
+                    influx:
+                      type: influxdb
+                      enabled: true
+                      url: " "
                 """);
 
         FrameworkException exception = assertThrows(
@@ -202,240 +385,10 @@ class TargetConfigValidatorTest {
                 () -> validator.validate(config)
         );
 
-        assertEquals("Host alias must not be blank.", exception.getMessage());
+        assertEquals("Metrics URL must not be blank for enabled alias: influx", exception.getMessage());
     }
 
-    @Test
-    void shouldFailWhenHostAddressIsBlank() throws Exception {
-        TargetConfig config = load("""
-                env: demo
-                api: {}
-                perf: {}
-                
-                hosts:
-                  app:
-                    role: "application"
-                    host: " "
-                    port: 22
-                """);
-
-        FrameworkException exception = assertThrows(
-                FrameworkException.class,
-                () -> validator.validate(config)
-        );
-
-        assertEquals("Host address must not be blank for alias: app", exception.getMessage());
-    }
-
-    @Test
-    void shouldFailWhenHostPortIsNotPositive() throws Exception {
-        TargetConfig config = load("""
-                env: demo
-                api: {}
-                perf: {}
-                
-                hosts:
-                  app:
-                    role: "application"
-                    host: "app.demo.test"
-                    port: -1
-                """);
-
-        FrameworkException exception = assertThrows(
-                FrameworkException.class,
-                () -> validator.validate(config)
-        );
-
-        assertEquals("Host port must be positive for alias: app", exception.getMessage());
-    }
-
-    @Test
-    void shouldFailWhenDefaultUserDoesNotExist() throws Exception {
-        TargetConfig config = load("""
-                env: demo
-                api: {}
-                perf: {}
-                
-                hosts:
-                  app:
-                    role: "application"
-                    host: "app.demo.test"
-                    port: 22
-                    defaultUser: "missing"
-                    users:
-                      app:
-                        username: "app"
-                """);
-
-        FrameworkException exception = assertThrows(
-                FrameworkException.class,
-                () -> validator.validate(config)
-        );
-
-        assertEquals("Default user 'missing' is not defined for host alias: app", exception.getMessage());
-    }
-
-    @Test
-    void shouldFailWhenUserAliasIsBlank() throws Exception {
-        TargetConfig config = load("""
-                env: demo
-                api: {}
-                perf: {}
-                
-                hosts:
-                  app:
-                    role: "application"
-                    host: "app.demo.test"
-                    port: 22
-                    users:
-                      " ":
-                        username: "app"
-                """);
-
-        FrameworkException exception = assertThrows(
-                FrameworkException.class,
-                () -> validator.validate(config)
-        );
-
-        assertEquals("User alias must not be blank for host alias: app", exception.getMessage());
-    }
-
-    @Test
-    void shouldFailWhenUsernameIsBlank() throws Exception {
-        TargetConfig config = load("""
-                env: demo
-                api: {}
-                perf: {}
-                
-                hosts:
-                  app:
-                    role: "application"
-                    host: "app.demo.test"
-                    port: 22
-                    users:
-                      app:
-                        username: " "
-                """);
-
-        FrameworkException exception = assertThrows(
-                FrameworkException.class,
-                () -> validator.validate(config)
-        );
-
-        assertEquals(
-                "Username must not be blank for user alias: app on host alias: app",
-                exception.getMessage()
-        );
-    }
-
-    @Test
-    void shouldFailWhenPoolSizeIsNotPositive() throws Exception {
-        TargetConfig config = load("""
-                env: demo
-                api: {}
-                perf: {}
-                
-                hosts:
-                  app:
-                    role: "application"
-                    host: "app.demo.test"
-                    port: 22
-                    pool:
-                      size: 0
-                """);
-
-        FrameworkException exception = assertThrows(
-                FrameworkException.class,
-                () -> validator.validate(config)
-        );
-
-        assertEquals("Unix pool size must be positive for host alias: app", exception.getMessage());
-    }
-
-    @Test
-    void shouldFailWhenPoolKeepAliveIsNegative() throws Exception {
-        TargetConfig config = load("""
-                env: demo
-                api: {}
-                perf: {}
-                
-                hosts:
-                  app:
-                    role: "application"
-                    host: "app.demo.test"
-                    port: 22
-                    pool:
-                      keepAliveSeconds: -1
-                """);
-
-        FrameworkException exception = assertThrows(
-                FrameworkException.class,
-                () -> validator.validate(config)
-        );
-
-        assertEquals(
-                "Unix pool keep-alive seconds must be non-negative for host alias: app",
-                exception.getMessage()
-        );
-    }
-
-    @Test
-    void shouldFailWhenPoolBorrowTimeoutIsNotPositive() throws Exception {
-        TargetConfig config = load("""
-                env: demo
-                api: {}
-                perf: {}
-                
-                hosts:
-                  app:
-                    role: "application"
-                    host: "app.demo.test"
-                    port: 22
-                    pool:
-                      borrowTimeoutSeconds: 0
-                """);
-
-        FrameworkException exception = assertThrows(
-                FrameworkException.class,
-                () -> validator.validate(config)
-        );
-
-        assertEquals(
-                "Unix pool borrow timeout seconds must be positive for host alias: app",
-                exception.getMessage()
-        );
-    }
-
-    @Test
-    void shouldFailWhenCommandTimeoutIsNotPositive() throws Exception {
-        TargetConfig config = load("""
-                env: demo
-                api: {}
-                perf: {}
-                
-                hosts:
-                  app:
-                    role: "application"
-                    host: "app.demo.test"
-                    port: 22
-                    commandTimeoutSeconds: 0
-                """);
-
-        FrameworkException exception = assertThrows(
-                FrameworkException.class,
-                () -> validator.validate(config)
-        );
-
-        assertEquals("Command timeout must be positive for alias: app", exception.getMessage());
-    }
-
-    /**
-     * Creates a temporary YAML file and loads it as {@link TargetConfig}.
-     *
-     * @param content YAML content.
-     * @return loaded target configuration.
-     * @throws Exception if the file cannot be written or loaded.
-     */
+    /** Creates a temporary YAML file and loads it as {@link TargetConfig}. */
     private TargetConfig load(String content) throws Exception {
         Path file = tempDir.resolve("target.yml");
 

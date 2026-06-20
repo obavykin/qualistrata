@@ -2,6 +2,7 @@ package com.bavykin.qualistrata.core.config;
 
 import com.bavykin.qualistrata.core.config.model.ResolvedTarget;
 import com.bavykin.qualistrata.core.config.resolution.TargetConfigResolutionRequest;
+import com.bavykin.qualistrata.core.config.secrets.UnixAccessSecret;
 import com.bavykin.qualistrata.core.exceptions.FrameworkException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -12,15 +13,16 @@ import java.util.Map;
 import java.util.Properties;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * Unit tests for {@link QualiStrataConfig}.
  *
  * <p>The tests verify the public configuration facade behavior from the point
- * of view of a consuming project. The facade should resolve target
- * configuration, apply generic validation, and return only validated
- * configuration to the caller.</p>
+ * of view of a consuming project. The facade resolves target resources,
+ * resolves secrets as a separate model, validates only generic target topology,
+ * and returns the validated {@link ResolvedTarget}.</p>
  */
 class QualiStrataConfigTest {
 
@@ -33,13 +35,12 @@ class QualiStrataConfigTest {
     void shouldResolveAndValidateTargetConfiguration() throws Exception {
         createTargetFile("demo", """
                 env: demo
-                
-                ui:
-                  baseUrl: "https://app.demo.test"
-                
-                api: {}
-                perf: {}
-                hosts: {}
+                resources:
+                  ui:
+                    web:
+                      type: web-ui
+                      baseUrl: "https://app.demo.test"
+                      defaultAccess: admin
                 """);
 
         ResolvedTarget resolvedTarget = config.resolveTarget(new TargetConfigResolutionRequest(
@@ -52,17 +53,14 @@ class QualiStrataConfigTest {
 
         assertEquals("demo", resolvedTarget.name());
         assertEquals("demo", resolvedTarget.config().env());
-        assertEquals("https://app.demo.test", resolvedTarget.config().ui().baseUrl());
+        assertEquals("https://app.demo.test", resolvedTarget.config().resources().ui().get("web").baseUrl());
     }
 
     @Test
     void shouldFailWhenResolvedConfigurationIsStructurallyInvalid() throws Exception {
         createTargetFile("demo", """
                 env: " "
-                
-                api: {}
-                perf: {}
-                hosts: {}
+                resources: {}
                 """);
 
         FrameworkException exception = assertThrows(
@@ -80,31 +78,25 @@ class QualiStrataConfigTest {
     }
 
     @Test
-    void shouldMergeSecretsBeforeValidation() throws Exception {
+    void shouldLoadSecretsSeparatelyFromTargetResources() throws Exception {
         createTargetFile("demo", """
                 env: demo
-                
-                api: {}
-                perf: {}
-                
-                hosts:
-                  app:
-                    role: "application"
-                    host: "app.demo.test"
-                    port: 22
-                    defaultUser: "app"
-                    users:
-                      app:
-                        username: "app"
-                        keyPath: "/home/app/.ssh/id_rsa"
+                resources:
+                  unix:
+                    app:
+                      role: application
+                      host: "app.demo.test"
+                      port: 22
+                      defaultAccess: app-user
                 """);
 
         createFile("config/secrets/demo.yml", """
-                hosts:
-                  app:
-                    users:
-                      app:
-                        password: "target-secret"
+                access:
+                  unix:
+                    app:
+                      app-user:
+                        username: app
+                        password: target-secret
                 """);
 
         ResolvedTarget resolvedTarget = config.resolveTarget(new TargetConfigResolutionRequest(
@@ -115,33 +107,28 @@ class QualiStrataConfigTest {
                 null
         ));
 
-        assertEquals(
-                "target-secret",
-                resolvedTarget.config().hosts().get("app").users().get("app").password()
-        );
+        UnixAccessSecret access = resolvedTarget
+                .secrets()
+                .access()
+                .unix()
+                .get("app")
+                .get("app-user");
+
+        assertNotNull(resolvedTarget.config().resources().unix().get("app"));
+        assertEquals("app.demo.test", resolvedTarget.config().resources().unix().get("app").host());
+        assertEquals("app", access.username());
+        assertEquals("target-secret", access.password());
     }
 
     /**
      * Creates a public target configuration file under the conventional target
      * configuration directory.
-     *
-     * @param targetName target name used in the conventional path.
-     * @param content YAML file content.
-     * @return created file path.
-     * @throws Exception if the file cannot be created.
      */
     private Path createTargetFile(String targetName, String content) throws Exception {
         return createFile("config/targets/" + targetName + ".yml", content);
     }
 
-    /**
-     * Creates a file under the temporary project root.
-     *
-     * @param relativePath path relative to the temporary project root.
-     * @param content file content.
-     * @return created file path.
-     * @throws Exception if the file cannot be created.
-     */
+    /** Creates a file under the temporary project root. */
     private Path createFile(String relativePath, String content) throws Exception {
         Path file = projectRoot.resolve(relativePath);
 

@@ -1,13 +1,5 @@
 package com.bavykin.qualistrata.unix.facade;
 
-import com.bavykin.qualistrata.core.config.model.APIConfig;
-import com.bavykin.qualistrata.core.config.model.DBConfig;
-import com.bavykin.qualistrata.core.config.model.HostConfig;
-import com.bavykin.qualistrata.core.config.model.PerfConfig;
-import com.bavykin.qualistrata.core.config.model.TargetConfig;
-import com.bavykin.qualistrata.core.config.model.UIConfig;
-import com.bavykin.qualistrata.core.config.model.UnixPoolConfig;
-import com.bavykin.qualistrata.core.config.model.UserConfig;
 import com.bavykin.qualistrata.core.contracts.unix.dto.CommandResult;
 import com.bavykin.qualistrata.unix.command.UnixCommandRequest;
 import com.bavykin.qualistrata.unix.session.UnixHostSession;
@@ -15,6 +7,7 @@ import com.bavykin.qualistrata.unix.session.UnixHostSessionRequest;
 import com.bavykin.qualistrata.unix.session.UnixSessionException;
 import com.bavykin.qualistrata.unix.session.UnixSessionProvider;
 import com.bavykin.qualistrata.unix.session.request.UnixHostSessionRequestFactory;
+import com.bavykin.qualistrata.unix.testsupport.UnixTestTargets;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
@@ -36,7 +29,7 @@ class UnixFacadeTest {
                 UnixSessionException.class,
                 () -> new UnixFacade(
                         null,
-                        new UnixHostSessionRequestFactory(validTargetConfig())
+                        new UnixHostSessionRequestFactory(UnixTestTargets.validResolvedTarget())
                 )
         );
 
@@ -223,62 +216,7 @@ class UnixFacadeTest {
     private UnixFacade testFacade(RecordingUnixSessionProvider provider) {
         return new UnixFacade(
                 provider,
-                new UnixHostSessionRequestFactory(validTargetConfig())
-        );
-    }
-
-    /**
-     * Creates a valid target configuration for tests.
-     *
-     * @return target configuration.
-     */
-    private static TargetConfig validTargetConfig() {
-        return new TargetConfig(
-                "dev",
-                Map.of(
-                        "app",
-                        validHost()
-                ),
-                new APIConfig(),
-                new DBConfig(null, null, null, null, null),
-                new UIConfig("https://example.test"),
-                new PerfConfig()
-        );
-    }
-
-    /**
-     * Creates a valid host configuration for tests.
-     *
-     * @return host configuration.
-     */
-    private static HostConfig validHost() {
-        return new HostConfig(
-                "application",
-                "192.0.2.10",
-                22,
-                "app",
-                Map.of(
-                        "app",
-                        new UserConfig(
-                                "app-user",
-                                "password",
-                                null
-                        ),
-                        "oracle",
-                        new UserConfig(
-                                "oracle-user",
-                                "password",
-                                null
-                        )
-                ),
-                null,
-                null,
-                new UnixPoolConfig(
-                        1,
-                        60,
-                        5
-                ),
-                10
+                new UnixHostSessionRequestFactory(UnixTestTargets.validResolvedTarget())
         );
     }
 
