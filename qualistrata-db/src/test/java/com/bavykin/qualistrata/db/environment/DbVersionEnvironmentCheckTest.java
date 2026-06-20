@@ -9,6 +9,7 @@ import java.util.List;
 
 import static com.bavykin.qualistrata.db.environment.DbEnvironmentCheckTestSupport.config;
 import static com.bavykin.qualistrata.db.environment.DbEnvironmentCheckTestSupport.failure;
+import static com.bavykin.qualistrata.db.environment.DbEnvironmentCheckTestSupport.sqlFailure;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
@@ -114,6 +115,34 @@ class DbVersionEnvironmentCheckTest {
         assertEquals("Database version check failed.", result.message());
         assertTrue(result.details().containsKey("exceptionType"));
         assertTrue(client.closed());
+    }
+
+
+    @Test
+    void shouldReportSqlAndOracleDiagnosticsWhenVersionQueryFailsWithSqlException() {
+        DbEnvironmentCheckTestSupport.FakeClient client =
+                new DbEnvironmentCheckTestSupport.FakeClient(
+                        sqlFailure("ORA-00942: table or view does not exist", "42000", 942)
+                );
+        DbEnvironmentCheckTestSupport.FakeProvider provider =
+                new DbEnvironmentCheckTestSupport.FakeProvider(
+                        DbType.ORACLE,
+                        "SELECT 1 FROM dual",
+                        "SELECT banner FROM v$version",
+                        client
+                );
+
+        DbVersionEnvironmentCheck check = new DbVersionEnvironmentCheck(
+                new DefaultDbProviderRegistry(List.of(provider))
+        );
+
+        DbEnvironmentCheckResult result = check.execute(config(DbType.ORACLE), "19.30.0.0.260120");
+
+        assertFalse(result.passed());
+        assertEquals("42000", result.details().get("sqlState"));
+        assertEquals("942", result.details().get("sqlErrorCode"));
+        assertEquals("ORA-00942", result.details().get("oraCode"));
+        assertFalse(result.details().toString().contains("table or view does not exist"));
     }
 
     @Test

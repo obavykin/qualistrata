@@ -9,6 +9,7 @@ import java.util.List;
 
 import static com.bavykin.qualistrata.db.environment.DbEnvironmentCheckTestSupport.config;
 import static com.bavykin.qualistrata.db.environment.DbEnvironmentCheckTestSupport.failure;
+import static com.bavykin.qualistrata.db.environment.DbEnvironmentCheckTestSupport.sqlFailure;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
@@ -69,6 +70,34 @@ class DbConnectionEnvironmentCheckTest {
         assertEquals("Database connection check failed.", result.message());
         assertTrue(result.details().containsKey("exceptionType"));
         assertTrue(client.closed());
+    }
+
+
+    @Test
+    void shouldReportSqlAndOracleDiagnosticsWhenHealthQueryFailsWithSqlException() {
+        DbEnvironmentCheckTestSupport.FakeClient client =
+                new DbEnvironmentCheckTestSupport.FakeClient(
+                        sqlFailure("ORA-01017: invalid username/password; logon denied", "72000", 1017)
+                );
+        DbEnvironmentCheckTestSupport.FakeProvider provider =
+                new DbEnvironmentCheckTestSupport.FakeProvider(
+                        DbType.ORACLE,
+                        "SELECT 1 FROM dual",
+                        "SELECT banner FROM v$version",
+                        client
+                );
+
+        DbConnectionEnvironmentCheck check = new DbConnectionEnvironmentCheck(
+                new DefaultDbProviderRegistry(List.of(provider))
+        );
+
+        DbEnvironmentCheckResult result = check.execute(config(DbType.ORACLE));
+
+        assertFalse(result.passed());
+        assertEquals("72000", result.details().get("sqlState"));
+        assertEquals("1017", result.details().get("sqlErrorCode"));
+        assertEquals("ORA-01017", result.details().get("oraCode"));
+        assertFalse(result.details().toString().contains("invalid username/password"));
     }
 
     @Test

@@ -8,6 +8,7 @@ import com.bavykin.qualistrata.db.provider.DbProvider;
 import com.bavykin.qualistrata.db.result.DbRows;
 import com.bavykin.qualistrata.db.transaction.DbTransactionCallback;
 
+import java.sql.SQLException;
 import java.time.Duration;
 import java.util.Map;
 
@@ -21,9 +22,13 @@ final class DbEnvironmentCheckTestSupport {
     }
 
     static DbConnectionConfig config() {
+        return config(DbType.POSTGRES);
+    }
+
+    static DbConnectionConfig config(DbType type) {
         return new DbConnectionConfig(
                 "main",
-                DbType.POSTGRES,
+                type,
                 "localhost",
                 5432,
                 "reporting",
@@ -135,5 +140,10 @@ final class DbEnvironmentCheckTestSupport {
 
     static RuntimeException failure(String message) {
         return new DbException("main", DbType.POSTGRES, message);
+    }
+
+    static RuntimeException sqlFailure(String message, String sqlState, int errorCode) {
+        SQLException sqlException = new SQLException(message, sqlState, errorCode);
+        return new DbException("main", DbType.POSTGRES, "DB operation failed.", sqlException);
     }
 }
