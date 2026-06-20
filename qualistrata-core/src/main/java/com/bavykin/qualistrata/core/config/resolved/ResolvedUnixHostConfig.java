@@ -21,6 +21,17 @@ public final class ResolvedUnixHostConfig {
     private final String keyPath;
     private final SecretValue keyPassphrase;
 
+    /**
+     * Creates resolved Unix host access configuration.
+     *
+     * @param alias Unix resource alias.
+     * @param accessAlias selected Unix access profile alias.
+     * @param resource non-secret Unix resource topology.
+     * @param username resolved Unix username.
+     * @param password resolved Unix password, or {@code null} when key-based access is used.
+     * @param keyPath path to private key, or {@code null} when password-based access is used.
+     * @param keyPassphrase private key passphrase, or {@code null} when not configured.
+     */
     public ResolvedUnixHostConfig(
             String alias,
             String accessAlias,
@@ -39,17 +50,40 @@ public final class ResolvedUnixHostConfig {
         this.keyPassphrase = keyPassphrase;
     }
 
+    /** @return Unix resource alias. */
     public String alias() { return alias; }
+
+    /** @return selected Unix access profile alias. */
     public String accessAlias() { return accessAlias; }
+
+    /** @return original non-secret Unix resource configuration. */
     public UnixResourceConfig resource() { return resource; }
+
+    /** @return Unix resource role, for example {@code application} or {@code database}. */
     public String role() { return resource == null ? null : resource.role(); }
+
+    /** @return Unix host address. */
     public String host() { return resource == null ? null : resource.host(); }
+
+    /** @return SSH port. */
     public Integer port() { return resource == null ? null : resource.port(); }
+
+    /** @return command timeout in seconds. */
     public Integer commandTimeoutSeconds() { return resource == null ? null : resource.commandTimeoutSeconds(); }
+
+    /** @return optional Unix session pool configuration. */
     public UnixPoolConfig pool() { return resource == null ? null : resource.pool(); }
+
+    /** @return resolved Unix username. */
     public String username() { return username; }
+
+    /** @return resolved Unix password, or {@code null} when not configured. */
     public SecretValue password() { return password; }
+
+    /** @return private key path, or {@code null} when not configured. */
     public String keyPath() { return keyPath; }
+
+    /** @return private key passphrase, or {@code null} when not configured. */
     public SecretValue keyPassphrase() { return keyPassphrase; }
 
     @Override

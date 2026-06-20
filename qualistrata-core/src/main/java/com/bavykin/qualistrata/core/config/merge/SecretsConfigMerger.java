@@ -15,6 +15,12 @@ import java.util.Map;
 public class SecretsConfigMerger {
 
     /**
+     * Creates a secrets config merger.
+     */
+    public SecretsConfigMerger() {
+    }
+
+    /**
      * Merges two secrets configuration layers.
      *
      * @param base base secrets configuration.

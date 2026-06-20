@@ -41,13 +41,24 @@ public class AccessResolver {
         this.secrets = secrets;
     }
 
-    /** Resolves Unix access using the resource default access profile. */
+    /**
+     * Resolves Unix access using the resource default access profile.
+     *
+     * @param alias Unix resource alias from {@code resources.unix}.
+     * @return resolved Unix runtime access configuration.
+     */
     public ResolvedUnixHostConfig unix(String alias) {
         UnixResourceConfig resource = unixResource(alias);
         return unix(alias, resource.defaultAccess());
     }
 
-    /** Resolves Unix access using an explicit access profile alias. */
+    /**
+     * Resolves Unix access using an explicit access profile alias.
+     *
+     * @param alias Unix resource alias from {@code resources.unix}.
+     * @param accessAlias access profile alias from {@code access.unix.<resource>}.
+     * @return resolved Unix runtime access configuration.
+     */
     public ResolvedUnixHostConfig unix(String alias, String accessAlias) {
         UnixResourceConfig resource = unixResource(alias);
         String resolvedAccessAlias = requireAccessAlias(alias, accessAlias, resource.defaultAccess(), "Unix");
@@ -69,13 +80,24 @@ public class AccessResolver {
         );
     }
 
-    /** Resolves database access using the resource default access profile. */
+    /**
+     * Resolves database access using the resource default access profile.
+     *
+     * @param alias database resource alias from {@code resources.databases}.
+     * @return resolved database runtime access configuration.
+     */
     public ResolvedDatabaseConfig database(String alias) {
         DatabaseResourceConfig resource = databaseResource(alias);
         return database(alias, resource.defaultAccess());
     }
 
-    /** Resolves database access using an explicit access profile alias. */
+    /**
+     * Resolves database access using an explicit access profile alias.
+     *
+     * @param alias database resource alias from {@code resources.databases}.
+     * @param accessAlias access profile alias from {@code access.databases.<resource>}.
+     * @return resolved database runtime access configuration.
+     */
     public ResolvedDatabaseConfig database(String alias, String accessAlias) {
         DatabaseResourceConfig resource = databaseResource(alias);
         String resolvedAccessAlias = requireAccessAlias(alias, accessAlias, resource.defaultAccess(), "Database");
@@ -96,13 +118,24 @@ public class AccessResolver {
         );
     }
 
-    /** Resolves UI access using the resource default access profile. */
+    /**
+     * Resolves UI access using the resource default access profile.
+     *
+     * @param alias UI resource alias from {@code resources.ui}.
+     * @return resolved UI runtime access configuration.
+     */
     public ResolvedUiConfig ui(String alias) {
         UiResourceConfig resource = uiResource(alias);
         return ui(alias, resource.defaultAccess());
     }
 
-    /** Resolves UI access using an explicit access profile alias. */
+    /**
+     * Resolves UI access using an explicit access profile alias.
+     *
+     * @param alias UI resource alias from {@code resources.ui}.
+     * @param accessAlias access profile alias from {@code access.ui.<resource>}.
+     * @return resolved UI runtime access configuration.
+     */
     public ResolvedUiConfig ui(String alias, String accessAlias) {
         UiResourceConfig resource = uiResource(alias);
         String resolvedAccessAlias = requireAccessAlias(alias, accessAlias, resource.defaultAccess(), "UI");
@@ -118,13 +151,24 @@ public class AccessResolver {
         );
     }
 
-    /** Resolves metrics access using the resource default access profile. */
+    /**
+     * Resolves metrics backend access using the resource default access profile.
+     *
+     * @param alias metrics resource alias from {@code resources.metrics}.
+     * @return resolved metrics backend runtime access configuration.
+     */
     public ResolvedMetricsConfig metrics(String alias) {
         MetricsResourceConfig resource = metricsResource(alias);
         return metrics(alias, resource.defaultAccess());
     }
 
-    /** Resolves metrics access using an explicit access profile alias. */
+    /**
+     * Resolves metrics backend access using an explicit access profile alias.
+     *
+     * @param alias metrics resource alias from {@code resources.metrics}.
+     * @param accessAlias access profile alias from {@code access.metrics.<resource>}.
+     * @return resolved metrics backend runtime access configuration.
+     */
     public ResolvedMetricsConfig metrics(String alias, String accessAlias) {
         MetricsResourceConfig resource = metricsResource(alias);
         String resolvedAccessAlias = requireAccessAlias(alias, accessAlias, resource.defaultAccess(), "Metrics");

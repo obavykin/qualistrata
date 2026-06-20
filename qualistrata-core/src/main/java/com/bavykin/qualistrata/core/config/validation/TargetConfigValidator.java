@@ -15,7 +15,17 @@ import java.util.Map;
  */
 public class TargetConfigValidator {
 
-    /** Validates a resolved target wrapper and its target topology. */
+    /**
+     * Creates a target configuration validator.
+     */
+    public TargetConfigValidator() {
+    }
+
+    /**
+     * Validates a resolved target wrapper and its target topology.
+     *
+     * @param resolvedTarget resolved target wrapper to validate.
+     */
     public void validate(ResolvedTarget resolvedTarget) {
         if (resolvedTarget == null) {
             throw new FrameworkException("Resolved target must not be null.");
@@ -27,7 +37,11 @@ public class TargetConfigValidator {
         validate(resolvedTarget.config());
     }
 
-    /** Validates generic target topology. */
+    /**
+     * Validates generic target topology.
+     *
+     * @param config target configuration to validate.
+     */
     public void validate(TargetConfig config) {
         if (config == null) {
             throw new FrameworkException("Target configuration must not be null.");

@@ -4,8 +4,8 @@ import com.bavykin.qualistrata.core.config.access.AccessResolver;
 import com.bavykin.qualistrata.core.config.model.HostConfig;
 import com.bavykin.qualistrata.core.config.model.ResolvedTarget;
 import com.bavykin.qualistrata.core.config.model.UserConfig;
-import com.bavykin.qualistrata.core.exceptions.FrameworkException;
 import com.bavykin.qualistrata.core.config.resolved.ResolvedUnixHostConfig;
+import com.bavykin.qualistrata.core.exceptions.FrameworkException;
 import com.bavykin.qualistrata.unix.session.UnixHostSessionRequest;
 import com.bavykin.qualistrata.unix.session.UnixSessionException;
 
@@ -48,12 +48,23 @@ public class UnixHostSessionRequestFactory {
         this.accessResolver = accessResolver;
     }
 
-    /** Creates a Unix host session request using the resource default access profile. */
+    /**
+     * Creates a Unix host session request using the resource default access profile.
+     *
+     * @param hostAlias Unix host resource alias from {@code resources.unix}.
+     * @return Unix host session request ready for the lower-level SSH session factory.
+     */
     public UnixHostSessionRequest create(String hostAlias) {
         return create(hostAlias, null);
     }
 
-    /** Creates a Unix host session request using an explicit access profile when provided. */
+    /**
+     * Creates a Unix host session request using an explicit access profile when provided.
+     *
+     * @param hostAlias Unix host resource alias from {@code resources.unix}.
+     * @param accessAlias access profile alias from {@code access.unix.<hostAlias>}.
+     * @return Unix host session request ready for the lower-level SSH session factory.
+     */
     public UnixHostSessionRequest create(String hostAlias, String accessAlias) {
         if (hostAlias == null || hostAlias.isBlank()) {
             throw new UnixSessionException("Unix host alias must not be blank.");
