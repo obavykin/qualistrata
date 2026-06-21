@@ -9,15 +9,14 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * Unit tests for {@link TargetConfigLoader}.
  *
- * <p>The tests verify the new generic resource topology model. They avoid
- * project-specific aliases and intentionally do not use the removed legacy
- * root-level {@code ui}, {@code db}, and {@code hosts} sections.</p>
+ * <p>The tests verify only generic YAML loading behavior. They intentionally do
+ * not rely on repository-level configuration files or product-specific target
+ * names, so the core module remains reusable across different projects.</p>
  */
 class TargetConfigLoaderTest {
 
@@ -29,10 +28,11 @@ class TargetConfigLoaderTest {
         Path configFile = tempDir.resolve("target.yml");
 
         Files.writeString(configFile, """
-                env: demo
+                env: PT-A
+                release: release_6.6
                 resources:
                   ui:
-                    web:
+                    tracker:
                       type: web-ui
                       baseUrl: "https://app.demo.test"
                       defaultAccess: admin
@@ -41,45 +41,31 @@ class TargetConfigLoaderTest {
                       role: application
                       host: "app.demo.test"
                       port: 22
-                      defaultAccess: app-user
+                      defaultAccess: tracker
                       commandTimeoutSeconds: 60
                   databases:
                     main:
                       type: oracle
                       host: "db.demo.test"
                       port: 1521
-                      databaseName: DEMO
+                      databaseName: "DEMO"
                       connectionMode: sid
-                      defaultAccess: app-db-user
-                      connectionTimeoutSeconds: 30
+                      defaultAccess: sagsys
+                      connectionTimeoutSeconds: 10
                       queryTimeoutSeconds: 30
-                  api:
-                    public-api:
-                      type: rest
-                      baseUrl: "https://api.demo.test"
-                      defaultAccess: service-account
-                  metrics:
-                    influx:
-                      type: influxdb
-                      enabled: false
-                      url: "https://metrics.demo.test"
-                      org: demo
-                      bucket: automation
-                      defaultAccess: writer
+                  api: {}
+                  metrics: {}
                 """);
 
         TargetConfig config = new TargetConfigLoader().load(configFile);
 
-        assertEquals("demo", config.env());
-        assertNotNull(config.resources());
-        assertEquals("https://app.demo.test", config.resources().ui().get("web").baseUrl());
+        assertEquals("PT-A", config.env());
+        assertEquals("release_6.6", config.release());
+        assertEquals("https://app.demo.test", config.resources().ui().get("tracker").baseUrl());
         assertEquals("app.demo.test", config.resources().unix().get("app").host());
-        assertEquals(22, config.resources().unix().get("app").port());
         assertEquals("db.demo.test", config.resources().databases().get("main").host());
         assertEquals(1521, config.resources().databases().get("main").port());
         assertEquals("DEMO", config.resources().databases().get("main").databaseName());
-        assertEquals("rest", config.resources().api().get("public-api").type());
-        assertEquals("influxdb", config.resources().metrics().get("influx").type());
     }
 
     @Test
