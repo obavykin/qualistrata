@@ -2,6 +2,10 @@ package com.bavykin.qualistrata.unix.session.pool;
 
 import com.bavykin.qualistrata.core.contracts.unix.dto.CommandResult;
 import com.bavykin.qualistrata.unix.command.UnixCommandRequest;
+import com.bavykin.qualistrata.unix.interactive.InteractiveCommandException;
+import com.bavykin.qualistrata.unix.interactive.InteractiveCommandResult;
+import com.bavykin.qualistrata.unix.interactive.InteractiveCommandScript;
+import com.bavykin.qualistrata.unix.session.InteractiveUnixHostSession;
 import com.bavykin.qualistrata.unix.session.UnixHostSession;
 
 /**
@@ -17,7 +21,7 @@ import com.bavykin.qualistrata.unix.session.UnixHostSession;
 record PooledSessionHandle(
         UnixSessionPoolKey key,
         UnixHostSession session
-) implements UnixHostSession {
+) implements InteractiveUnixHostSession {
 
     /**
      * Executes a command through the underlying physical session.
@@ -28,6 +32,21 @@ record PooledSessionHandle(
     @Override
     public CommandResult execute(UnixCommandRequest request) {
         return session.execute(request);
+    }
+
+    /**
+     * Executes an interactive command through the underlying physical session.
+     *
+     * @param script interactive command script.
+     * @return interactive command result.
+     */
+    @Override
+    public InteractiveCommandResult executeInteractive(InteractiveCommandScript script) {
+        if (!(session instanceof InteractiveUnixHostSession interactiveSession)) {
+            throw new InteractiveCommandException("Pooled session handle delegate does not support interactive command execution.");
+        }
+
+        return interactiveSession.executeInteractive(script);
     }
 
     /**

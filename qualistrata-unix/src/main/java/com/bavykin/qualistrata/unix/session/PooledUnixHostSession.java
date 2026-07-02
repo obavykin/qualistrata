@@ -2,6 +2,9 @@ package com.bavykin.qualistrata.unix.session;
 
 import com.bavykin.qualistrata.core.contracts.unix.dto.CommandResult;
 import com.bavykin.qualistrata.unix.command.UnixCommandRequest;
+import com.bavykin.qualistrata.unix.interactive.InteractiveCommandException;
+import com.bavykin.qualistrata.unix.interactive.InteractiveCommandResult;
+import com.bavykin.qualistrata.unix.interactive.InteractiveCommandScript;
 
 /**
  * Consumer-facing wrapper for a borrowed pooled Unix session.
@@ -14,7 +17,7 @@ import com.bavykin.qualistrata.unix.command.UnixCommandRequest;
  * after {@link #close()} is called, further command execution through this
  * wrapper is rejected.</p>
  */
-class PooledUnixHostSession implements InvalidatableUnixHostSession  {
+class PooledUnixHostSession implements InvalidatableUnixHostSession, InteractiveUnixHostSession  {
 
     private final UnixHostSession delegate;
     private final UnixHostSessionPool pool;
@@ -56,6 +59,23 @@ class PooledUnixHostSession implements InvalidatableUnixHostSession  {
         ensureOpen();
 
         return delegate.execute(request);
+    }
+
+    /**
+     * Executes an interactive command through the borrowed session.
+     *
+     * @param script interactive command script.
+     * @return interactive command result.
+     */
+    @Override
+    public InteractiveCommandResult executeInteractive(InteractiveCommandScript script) {
+        ensureOpen();
+
+        if (!(delegate instanceof InteractiveUnixHostSession interactiveSession)) {
+            throw new InteractiveCommandException("Pooled Unix session delegate does not support interactive command execution.");
+        }
+
+        return interactiveSession.executeInteractive(script);
     }
 
     /**

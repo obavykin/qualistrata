@@ -32,7 +32,7 @@ class MeasuredRemoteFileClientTest {
         assertEquals(1, entries.size());
         assertEquals(2, sink.events().size());
 
-        TelemetryEvent upload = sink.events().get(0);
+        TelemetryEvent upload = sink.events().getFirst();
         assertEquals(MeasuredRemoteFileClient.FILE_UPLOAD_METRIC, upload.name());
         assertEquals("unix", upload.tags().get("module"));
         assertEquals("file", upload.tags().get("operation"));
