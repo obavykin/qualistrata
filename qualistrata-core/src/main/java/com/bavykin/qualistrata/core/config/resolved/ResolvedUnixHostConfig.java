@@ -71,6 +71,12 @@ public final class ResolvedUnixHostConfig {
     /** @return command timeout in seconds. */
     public Integer commandTimeoutSeconds() { return resource == null ? null : resource.commandTimeoutSeconds(); }
 
+    /**
+     * @return optional shell profile path or command for preparing the Unix shell environment
+     * before consumer command execution.
+     */
+    public String shellProfile() { return resource == null ? null : resource.shellProfile(); }
+
     /** @return optional Unix session pool configuration. */
     public UnixPoolConfig pool() { return resource == null ? null : resource.pool(); }
 
@@ -94,6 +100,7 @@ public final class ResolvedUnixHostConfig {
                 ", role='" + role() + '\'' +
                 ", host='" + host() + '\'' +
                 ", port=" + port() +
+                ", shellProfile='" + shellProfile() + '\'' +
                 ", username='" + username + '\'' +
                 ", password=" + mask(password) +
                 ", keyPath='" + keyPath + '\'' +

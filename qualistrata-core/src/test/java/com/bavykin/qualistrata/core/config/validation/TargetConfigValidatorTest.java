@@ -212,6 +212,27 @@ class TargetConfigValidatorTest {
         assertEquals("Unix host port must be positive for resource alias: app", exception.getMessage());
     }
 
+
+    @Test
+    void shouldFailWhenUnixShellProfileIsBlank() throws Exception {
+        TargetConfig config = load("""
+                env: demo
+                resources:
+                  unix:
+                    app:
+                      host: "app.demo.test"
+                      port: 22
+                      shellProfile: " "
+                """);
+
+        FrameworkException exception = assertThrows(
+                FrameworkException.class,
+                () -> validator.validate(config)
+        );
+
+        assertEquals("Unix shell profile must not be blank for resource alias: app", exception.getMessage());
+    }
+
     @Test
     void shouldFailWhenDatabasePortIsNotPositive() throws Exception {
         TargetConfig config = load("""

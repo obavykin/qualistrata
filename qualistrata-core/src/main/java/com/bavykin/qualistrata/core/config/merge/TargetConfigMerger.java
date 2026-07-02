@@ -134,6 +134,7 @@ public class TargetConfigMerger {
                 valueOrBase(override.port(), base.port()),
                 valueOrBase(override.defaultAccess(), base.defaultAccess()),
                 valueOrBase(override.commandTimeoutSeconds(), base.commandTimeoutSeconds()),
+                valueOrBase(override.shellProfile(), base.shellProfile()),
                 mergeUnixPool(base.pool(), override.pool())
         );
     }

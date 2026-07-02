@@ -148,6 +148,8 @@ public class TargetConfigValidator {
                 "Unix default access alias must not be blank for resource alias: " + alias);
         requirePositive(resource.commandTimeoutSeconds(),
                 "Unix command timeout must be positive for resource alias: " + alias);
+        requireNotBlankWhenPresent(resource.shellProfile(),
+                "Unix shell profile must not be blank for resource alias: " + alias);
         validateUnixPool(alias, resource.pool());
     }
 

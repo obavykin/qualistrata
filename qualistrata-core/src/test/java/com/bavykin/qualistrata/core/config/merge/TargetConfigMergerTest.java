@@ -128,6 +128,7 @@ class TargetConfigMergerTest {
                                 22,
                                 "tracker",
                                 60,
+                                "/opt/app/.profile",
                                 new UnixPoolConfig(2, 30, 5)
                         )),
                         null,
@@ -145,6 +146,7 @@ class TargetConfigMergerTest {
                                 null,
                                 null,
                                 null,
+                                "/opt/app/override.profile",
                                 new UnixPoolConfig(null, 120, null)
                         )),
                         null,
@@ -161,6 +163,7 @@ class TargetConfigMergerTest {
         assertEquals(22, app.port());
         assertEquals("tracker", app.defaultAccess());
         assertEquals(60, app.commandTimeoutSeconds());
+        assertEquals("/opt/app/override.profile", app.shellProfile());
         assertEquals(2, app.pool().size());
         assertEquals(120, app.pool().keepAliveSeconds());
         assertEquals(5, app.pool().borrowTimeoutSeconds());
@@ -237,7 +240,7 @@ class TargetConfigMergerTest {
                 "demo",
                 new ResourcesConfig(
                         null,
-                        Map.of("app", new UnixResourceConfig("application", "app.base.test", 22, null, null, null)),
+                        Map.of("app", new UnixResourceConfig("application", "app.base.test", 22, null, null, null, null)),
                         null,
                         null,
                         null
@@ -247,7 +250,7 @@ class TargetConfigMergerTest {
                 null,
                 new ResourcesConfig(
                         null,
-                        Map.of("db-host", new UnixResourceConfig("database", "db.base.test", 22, null, null, null)),
+                        Map.of("db-host", new UnixResourceConfig("database", "db.base.test", 22, null, null, null, null)),
                         null,
                         null,
                         null

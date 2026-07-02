@@ -43,6 +43,7 @@ class TargetConfigLoaderTest {
                       port: 22
                       defaultAccess: tracker
                       commandTimeoutSeconds: 60
+                      shellProfile: "/opt/tracker/.profile"
                   databases:
                     main:
                       type: oracle
@@ -63,6 +64,7 @@ class TargetConfigLoaderTest {
         assertEquals("release_6.6", config.release());
         assertEquals("https://app.demo.test", config.resources().ui().get("tracker").baseUrl());
         assertEquals("app.demo.test", config.resources().unix().get("app").host());
+        assertEquals("/opt/tracker/.profile", config.resources().unix().get("app").shellProfile());
         assertEquals("db.demo.test", config.resources().databases().get("main").host());
         assertEquals(1521, config.resources().databases().get("main").port());
         assertEquals("DEMO", config.resources().databases().get("main").databaseName());

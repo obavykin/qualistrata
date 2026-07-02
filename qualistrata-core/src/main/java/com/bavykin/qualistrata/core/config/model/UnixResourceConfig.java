@@ -12,6 +12,7 @@ package com.bavykin.qualistrata.core.config.model;
  * @param port SSH or Unix adapter port.
  * @param defaultAccess default access profile alias.
  * @param commandTimeoutSeconds default command execution timeout in seconds.
+ * @param shellProfile optional shell profile path or command that should be sourced before Unix command execution.
  * @param pool optional Unix connection pool configuration.
  */
 public record UnixResourceConfig(
@@ -20,6 +21,7 @@ public record UnixResourceConfig(
         Integer port,
         String defaultAccess,
         Integer commandTimeoutSeconds,
+        String shellProfile,
         UnixPoolConfig pool
 ) {
 }

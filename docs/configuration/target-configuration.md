@@ -356,6 +356,7 @@ hosts:
       keepAliveSeconds: 60
       borrowTimeoutSeconds: 10
     commandTimeoutSeconds: 60
+    shellProfile: "/opt/demo/app/.profile"
 
   db:
     role: "database"
@@ -371,6 +372,7 @@ hosts:
       keepAliveSeconds: 60
       borrowTimeoutSeconds: 10
     commandTimeoutSeconds: 120
+    shellProfile: "/opt/oracle/.profile"
 ```
 
 The `.test` top-level domain is intentionally used for examples and documentation. It should not be used as a real public production domain.
@@ -577,8 +579,11 @@ hosts:
 | `users`                 | Map of logical user definitions.                                        |
 | `pool`                  | Optional Unix connection pool settings.                                 |
 | `commandTimeoutSeconds` | Optional default command execution timeout for this host.               |
+| `shellProfile`           | Optional host-specific shell profile path or command used before Unix command execution. |
 
 The host alias, such as `app` or `db`, is a logical key. Framework and project modules should use this alias instead of duplicating hostnames across tests.
+
+`shellProfile` belongs to the concrete Unix resource because it describes how commands must be executed on a specific environment. Shared release baselines should describe expected components and versions, not host-specific profile paths.
 
 ## Users
 

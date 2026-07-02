@@ -14,6 +14,7 @@ resources:
       port: 22
       defaultAccess: app-user
       commandTimeoutSeconds: 60
+      shellProfile: /opt/demo/app/.profile
       pool:
         size: 5
         keepAliveSeconds: 300
@@ -25,6 +26,7 @@ resources:
       port: 22
       defaultAccess: oracle-os-user
       commandTimeoutSeconds: 60
+      shellProfile: /opt/oracle/.profile
       pool:
         size: 5
         keepAliveSeconds: 300
