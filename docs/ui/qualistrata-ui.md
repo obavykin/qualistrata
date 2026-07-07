@@ -447,3 +447,164 @@ QualiStrataUiTestListener
 
 This keeps reporting, failure artifacts, and cleanup behaviour consistent across
 simple and advanced UI suites.
+
+## JUnit 5 lifecycle integration
+
+`qualistrata-ui` also provides a JUnit 5 adapter. This keeps the UI runtime
+independent from a specific Java test runner and allows JUnit-based consumer
+projects to use the same reporting, artifact, cleanup, and mutation
+classification model without introducing TestNG.
+
+Minimal usage:
+
+```java
+@ExtendWith(QualiStrataJunitUiExtension.class)
+class SomeJunitUiTest {
+    // consumer fixture creates UiDriver / UiBrowserContext / UiSession
+}
+```
+
+Projects that want the standard lifecycle can extend
+`AbstractQualiStrataJunitUiTest`:
+
+```java
+public abstract class ProductJunitUiTest extends AbstractQualiStrataJunitUiTest {
+
+    @Override
+    protected UiRuntimeConfig uiRuntimeConfig() {
+        ResolvedUiConfig ui = resolveUiFromQualiStrataCore();
+        return UiRuntimeConfigFactory.from(ui, System.getProperties());
+    }
+}
+```
+
+The JUnit base class uses the same lifecycle as the TestNG base class:
+
+```text
+BeforeAll
+  create UiTestRuntime
+  launch one heavy browser driver
+
+BeforeEach
+  create isolated browser context
+  create primary UiSession for the test
+
+AfterEach
+  close UiSession
+  close browser context
+
+AfterAll
+  close browser driver
+```
+
+### JUnit mutation annotations and tags
+
+JUnit projects should use the JUnit-specific annotations from
+`com.bavykin.qualistrata.ui.junit`:
+
+```java
+@NonMutatingUiTest
+@Test
+void userCanOpenDashboard() {
+    // read-only navigation/assertions
+}
+
+@MutatingUiTest
+@Test
+void userCanCreateRequest() {
+    // changes product state
+}
+
+@RequiresExclusiveEnvironment
+@Test
+void userCanRunExclusiveFlow() {
+    // must not run together with other live tests
+}
+```
+
+These annotations also emit standard JUnit tags:
+
+```text
+ui
+non-mutating
+mutating
+exclusive
+```
+
+Consumer projects may also use plain `@Tag` values directly, but the
+QualiStrata annotations are preferred because they keep the intent readable.
+
+### Recommended JUnit Gradle tasks
+
+Parallel read-only UI task:
+
+```kotlin
+tasks.register<Test>("uiNonMutatingTest") {
+    useJUnitPlatform {
+        includeTags("ui", "non-mutating")
+        excludeTags("mutating", "exclusive")
+    }
+
+    failFast = false
+    systemProperty("junit.jupiter.execution.parallel.enabled", "true")
+    systemProperty("junit.jupiter.execution.parallel.mode.default", "concurrent")
+    systemProperty("ui.mutation.unclassified.policy", "fail")
+}
+```
+
+Sequential mutating UI task:
+
+```kotlin
+tasks.register<Test>("uiMutatingTest") {
+    useJUnitPlatform {
+        includeTags("ui", "mutating")
+        excludeTags("exclusive")
+    }
+
+    failFast = false
+    maxParallelForks = 1
+    systemProperty("junit.jupiter.execution.parallel.enabled", "false")
+    systemProperty("ui.mutation.unclassified.policy", "fail")
+}
+```
+
+Exclusive UI task:
+
+```kotlin
+tasks.register<Test>("uiExclusiveTest") {
+    useJUnitPlatform {
+        includeTags("ui", "exclusive")
+    }
+
+    failFast = false
+    maxParallelForks = 1
+    systemProperty("junit.jupiter.execution.parallel.enabled", "false")
+    systemProperty("ui.mutation.unclassified.policy", "fail")
+}
+```
+
+### Runner boundary
+
+The core UI runtime remains runner-agnostic:
+
+```text
+UiSession
+UiTestRuntime
+UiTestSession
+UiArtifactCollector
+UiReportWriter
+```
+
+Runner-specific packages are thin adapters:
+
+```text
+com.bavykin.qualistrata.ui.testng
+  TestNG listener, annotations, and optional base fixture.
+
+com.bavykin.qualistrata.ui.junit
+  JUnit 5 extension, annotations, and optional base fixture.
+```
+
+Consumer projects should choose the adapter that matches their existing test
+stack. They should not migrate an entire project from JUnit to TestNG, or from
+TestNG to JUnit, only to use `qualistrata-ui`.
