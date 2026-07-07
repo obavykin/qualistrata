@@ -120,3 +120,83 @@ Implemented in the first increment:
 - local UI report model and JSON/HTML writers;
 - mutation classification annotations and policy;
 - unit tests that do not launch a real browser.
+
+## TestNG lifecycle integration
+
+The second implementation increment adds a non-intrusive TestNG listener:
+
+```java
+@Listeners(QualiStrataUiTestListener.class)
+class SomeUiTest {
+    // consumer fixture creates UiDriver / UiBrowserContext / UiSession
+}
+```
+
+or through TestNG suite XML:
+
+```xml
+<listeners>
+  <listener class-name="com.bavykin.qualistrata.ui.testng.QualiStrataUiTestListener"/>
+</listeners>
+```
+
+The listener does not create browsers by itself. It observes sessions registered
+in `UiSessionRegistry`, collects diagnostics for failed tests, closes leaked
+sessions at the end of every test method, and writes aggregated reports at suite
+finish.
+
+Default output:
+
+```text
+build/reports/ui/
+  ui-report.json
+  ui-report.html
+  artifacts/
+    screenshots/
+    traces/
+```
+
+The report directory can be changed with:
+
+```text
+-Dui.report.dir=build/reports/custom-ui
+```
+
+### Failure artifacts
+
+Default failure artifact behaviour:
+
+```text
+ui.screenshot.on.failure=true
+ui.trace.mode=on_failure
+```
+
+Screenshots and Playwright traces are best-effort diagnostics. Artifact
+collection failures are intentionally ignored so they never hide the original
+functional assertion failure.
+
+### Cleanup rule
+
+`UiSessionRegistry` is thread-local. Playwright sessions created through
+`UiBrowserContext.newSession()` and `WindowSupport.waitForNewWindow(...)` are
+registered automatically. The listener closes any sessions still registered for
+the current TestNG worker thread after each test result.
+
+This protects CI runs from one failed UI test poisoning the next test through an
+open page/window. Test fixtures may still close sessions explicitly; explicit
+close unregisters the session from the registry.
+
+### Build behaviour
+
+The listener does not enable fail-fast. Consumer Gradle/TestNG configuration
+should keep suite execution non-fail-fast so all tests run, all artifacts are
+collected, and the build fails only after the full suite result is known.
+
+Recommended Gradle setting:
+
+```kotlin
+tasks.register<Test>("uiTest") {
+    useTestNG()
+    failFast = false
+}
+```

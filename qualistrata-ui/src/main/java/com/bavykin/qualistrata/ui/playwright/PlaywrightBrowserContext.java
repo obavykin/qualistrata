@@ -4,6 +4,8 @@ import com.bavykin.qualistrata.ui.config.UiRuntimeConfig;
 import com.bavykin.qualistrata.ui.driver.UiBrowserContext;
 import com.bavykin.qualistrata.ui.driver.UiCapabilities;
 import com.bavykin.qualistrata.ui.driver.UiSession;
+import com.bavykin.qualistrata.ui.driver.UiSessionRegistry;
+import com.bavykin.qualistrata.ui.config.UiTraceMode;
 import com.microsoft.playwright.BrowserContext;
 
 /**
@@ -21,11 +23,16 @@ public final class PlaywrightBrowserContext implements UiBrowserContext {
         this.config = config;
         this.capabilities = capabilities;
         this.context.setDefaultTimeout(config.timeouts().defaultTimeout().toMillis());
+        if (config.traceMode() == UiTraceMode.ON_FAILURE) {
+            this.context.tracing().start(new com.microsoft.playwright.Tracing.StartOptions()
+                    .setScreenshots(true)
+                    .setSnapshots(true));
+        }
     }
 
     @Override
     public UiSession newSession() {
-        return new PlaywrightUiSession(context.newPage(), config, capabilities);
+        return UiSessionRegistry.register(new PlaywrightUiSession(context.newPage(), config, capabilities));
     }
 
     @Override

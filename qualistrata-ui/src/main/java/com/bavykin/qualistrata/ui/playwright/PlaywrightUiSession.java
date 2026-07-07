@@ -4,6 +4,7 @@ import com.bavykin.qualistrata.ui.config.UiRuntimeConfig;
 import com.bavykin.qualistrata.ui.driver.DownloadSupport;
 import com.bavykin.qualistrata.ui.driver.UiCapabilities;
 import com.bavykin.qualistrata.ui.driver.UiSession;
+import com.bavykin.qualistrata.ui.driver.UiSessionRegistry;
 import com.bavykin.qualistrata.ui.driver.WindowSupport;
 import com.bavykin.qualistrata.ui.element.UiElement;
 import com.bavykin.qualistrata.ui.element.UiElementCollection;
@@ -82,7 +83,11 @@ public final class PlaywrightUiSession implements UiSession {
 
     @Override
     public void close() {
-        page.close();
+        try {
+            page.close();
+        } finally {
+            UiSessionRegistry.unregister(this);
+        }
     }
 
     private String resolveUrl(String urlOrPath) {

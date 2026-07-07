@@ -33,18 +33,35 @@ public final class HtmlUiReportWriter implements UiReportWriter {
                 .append("; <b>Passed:</b> ").append(report.passed())
                 .append("; <b>Failed:</b> ").append(report.failed())
                 .append("; <b>Skipped:</b> ").append(report.skipped()).append("</p>")
-                .append("<table><thead><tr><th>Class</th><th>Method</th><th>Status</th><th>Duration ms</th><th>Error</th></tr></thead><tbody>");
+                .append("<table><thead><tr><th>Class</th><th>Method</th><th>Status</th><th>Duration ms</th><th>Artifacts</th><th>Error</th></tr></thead><tbody>");
 
         for (UiTestReport test : report.tests()) {
             builder.append("<tr><td>").append(escape(test.className()))
                     .append("</td><td>").append(escape(test.methodName()))
                     .append("</td><td>").append(test.status())
                     .append("</td><td>").append(test.duration() == null ? "" : test.duration().toMillis())
+                    .append("</td><td>").append(artifacts(test))
                     .append("</td><td>").append(escape(test.error()))
                     .append("</td></tr>");
         }
 
         return builder.append("</tbody></table></body></html>").toString();
+    }
+
+    private String artifacts(UiTestReport test) {
+        if (test.artifacts().isEmpty()) {
+            return "";
+        }
+
+        StringBuilder builder = new StringBuilder();
+        for (int i = 0; i < test.artifacts().size(); i++) {
+            if (i > 0) {
+                builder.append("<br>");
+            }
+            var artifact = test.artifacts().get(i);
+            builder.append(artifact.type()).append(": ").append(escape(artifact.path().toString()));
+        }
+        return builder.toString();
     }
 
     private String escape(String value) {

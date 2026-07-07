@@ -3,6 +3,7 @@ package com.bavykin.qualistrata.ui.playwright;
 import com.bavykin.qualistrata.ui.config.UiRuntimeConfig;
 import com.bavykin.qualistrata.ui.driver.UiCapabilities;
 import com.bavykin.qualistrata.ui.driver.UiSession;
+import com.bavykin.qualistrata.ui.driver.UiSessionRegistry;
 import com.bavykin.qualistrata.ui.driver.WindowSupport;
 import com.microsoft.playwright.Page;
 
@@ -33,6 +34,6 @@ final class PlaywrightWindowSupport implements WindowSupport {
         Page.WaitForPopupOptions options = new Page.WaitForPopupOptions()
                 .setTimeout(timeout.toMillis());
         Page child = page.waitForPopup(options, action);
-        return new PlaywrightUiSession(child, config, capabilities);
+        return UiSessionRegistry.register(new PlaywrightUiSession(child, config, capabilities));
     }
 }
