@@ -14,6 +14,8 @@ import com.bavykin.qualistrata.ui.reporting.UiRunReport;
 import com.bavykin.qualistrata.ui.reporting.UiStepReport;
 import com.bavykin.qualistrata.ui.reporting.UiTestReport;
 import com.bavykin.qualistrata.ui.reporting.UiTestStatus;
+import org.testng.IInvokedMethod;
+import org.testng.IInvokedMethodListener;
 import org.testng.ISuite;
 import org.testng.ISuiteListener;
 import org.testng.ITestListener;
@@ -40,13 +42,17 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * registered in {@link UiSessionRegistry}, collects diagnostics on failure, and
  * closes any sessions that were not closed by the test fixture.</p>
  */
-public class UiTestLifecycleListener implements ITestListener, ISuiteListener {
+public class UiTestLifecycleListener implements ITestListener, ISuiteListener, IInvokedMethodListener {
 
     /** Runtime property that controls the UI report output directory. */
     public static final String REPORT_DIRECTORY_PROPERTY = "ui.report.dir";
 
+    /** Runtime property that controls behaviour for unclassified UI tests. */
+    public static final String UNCLASSIFIED_POLICY_PROPERTY = "ui.mutation.unclassified.policy";
+
     private final List<UiTestReport> tests = new CopyOnWriteArrayList<>();
     private final UiMutationClassifier mutationClassifier = new UiMutationClassifier();
+    private final UiMutationClassificationValidator mutationValidator;
     private final Properties properties;
     private final Path reportDirectory;
     private final UiArtifactCollector artifactCollector;
@@ -77,6 +83,10 @@ public class UiTestLifecycleListener implements ITestListener, ISuiteListener {
             List<UiReportWriter> reportWriters
     ) {
         this.properties = properties == null ? new Properties() : properties;
+        this.mutationValidator = new UiMutationClassificationValidator(
+                mutationClassifier,
+                UiUnclassifiedTestPolicy.from(this.properties.getProperty(UNCLASSIFIED_POLICY_PROPERTY))
+        );
         this.reportDirectory = reportDirectory == null ? Path.of("build", "reports", "ui") : reportDirectory;
         this.artifactCollector = artifactCollector == null
                 ? UiArtifactCollectors.localFailureCollectors(this.reportDirectory, this.properties)
@@ -88,6 +98,20 @@ public class UiTestLifecycleListener implements ITestListener, ISuiteListener {
     @Override
     public void onStart(ISuite suite) {
         startedAt = Instant.now();
+    }
+
+    @Override
+    public void beforeInvocation(IInvokedMethod method, ITestResult testResult) {
+        if (method == null || !method.isTestMethod()) {
+            return;
+        }
+
+        Method javaMethod = method.getTestMethod() == null
+                ? null
+                : method.getTestMethod().getConstructorOrMethod().getMethod();
+        if (javaMethod != null) {
+            mutationValidator.validate(javaMethod, method.getTestMethod().getGroups());
+        }
     }
 
     @Override
@@ -153,7 +177,9 @@ public class UiTestLifecycleListener implements ITestListener, ISuiteListener {
         }
 
         Method method = result.getMethod() == null ? null : result.getMethod().getConstructorOrMethod().getMethod();
-        UiMutationType mutationType = method == null ? null : mutationClassifier.classify(method);
+        UiMutationType mutationType = method == null
+                ? null
+                : mutationClassifier.classify(method, result.getMethod() == null ? new String[0] : result.getMethod().getGroups());
         Instant testStartedAt = Instant.ofEpochMilli(result.getStartMillis());
         long endMillis = result.getEndMillis() > 0 ? result.getEndMillis() : System.currentTimeMillis();
 

@@ -7,6 +7,8 @@ import java.lang.annotation.Target;
 
 /**
  * Marks a UI test that changes product data and should not be parallelized by default.
+ *
+ * <p>Equivalent TestNG group: {@link UiTestGroups#MUTATING}.</p>
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.METHOD, ElementType.TYPE})

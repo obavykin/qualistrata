@@ -73,6 +73,7 @@ ui.screenshot.on.failure
 ui.trace.mode
 ui.video.on.failure
 ui.max.parallel.sessions
+ui.mutation.unclassified.policy
 ```
 
 Default engine is Playwright with Chromium in headless mode.
@@ -200,3 +201,139 @@ tasks.register<Test>("uiTest") {
     failFast = false
 }
 ```
+
+## Parallel execution and mutation validation
+
+The third implementation increment formalizes UI mutation classification for CI.
+Annotations are the preferred mechanism:
+
+```java
+@NonMutatingUiTest
+@Test
+void userCanOpenDashboard() {
+    // read-only navigation/assertions
+}
+
+@MutatingUiTest
+@Test
+void userCanCreateDraftRequest() {
+    // changes product data
+}
+
+@RequiresExclusiveEnvironment
+@Test
+void userCanRunEnvironmentWideMaintenanceFlow() {
+    // must not run together with any other live UI test
+}
+```
+
+Equivalent TestNG groups are available for projects that prefer suite XML or
+existing group-based selection:
+
+```java
+UiTestGroups.NON_MUTATING   // ui-non-mutating
+UiTestGroups.MUTATING       // ui-mutating
+UiTestGroups.EXCLUSIVE      // ui-exclusive
+```
+
+Classification precedence is intentionally conservative:
+
+```text
+exclusive > mutating > non-mutating
+```
+
+If a test declares more than one mutation type through mixed annotations/groups,
+QualiStrata treats this as a configuration error and fails the test before the
+browser scenario executes.
+
+### Unclassified test policy
+
+By default, unclassified UI tests are allowed so existing suites can adopt the
+model gradually:
+
+```text
+-Dui.mutation.unclassified.policy=allow
+```
+
+Available values:
+
+```text
+allow  - allow unclassified tests and record null mutation type in the report
+warn   - allow but print a warning
+fail   - fail the test before execution
+```
+
+Recommended CI hardening mode once a project has migrated UI tests:
+
+```text
+-Dui.mutation.unclassified.policy=fail
+```
+
+### Recommended TestNG suite split
+
+Parallel read-only suite:
+
+```xml
+<suite name="ui-readonly" parallel="methods" thread-count="4">
+  <groups>
+    <run>
+      <include name="ui-non-mutating"/>
+    </run>
+  </groups>
+</suite>
+```
+
+Sequential mutating suite:
+
+```xml
+<suite name="ui-mutating" parallel="false">
+  <groups>
+    <run>
+      <include name="ui-mutating"/>
+    </run>
+  </groups>
+</suite>
+```
+
+Exclusive environment suite:
+
+```xml
+<suite name="ui-exclusive" parallel="false">
+  <groups>
+    <run>
+      <include name="ui-exclusive"/>
+    </run>
+  </groups>
+</suite>
+```
+
+### Recommended Gradle tasks
+
+Consumer projects can expose separate tasks for CI:
+
+```kotlin
+tasks.register<Test>("uiNonMutatingTest") {
+    useTestNG {
+        includeGroups("ui-non-mutating")
+        listeners.add("com.bavykin.qualistrata.ui.testng.QualiStrataUiTestListener")
+    }
+
+    failFast = false
+    systemProperty("ui.mutation.unclassified.policy", "fail")
+    systemProperty("ui.max.parallel.sessions", System.getProperty("ui.max.parallel.sessions") ?: "4")
+}
+
+tasks.register<Test>("uiMutatingTest") {
+    useTestNG {
+        includeGroups("ui-mutating")
+        listeners.add("com.bavykin.qualistrata.ui.testng.QualiStrataUiTestListener")
+    }
+
+    failFast = false
+    maxParallelForks = 1
+    systemProperty("ui.mutation.unclassified.policy", "fail")
+}
+```
+
+This keeps the fast read-only suite parallel while preserving deterministic
+execution for data-changing tests.

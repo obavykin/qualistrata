@@ -14,4 +14,17 @@ public final class UiParallelExecutionPolicy {
     public boolean requiresSequentialRun(UiMutationType mutationType) {
         return mutationType == UiMutationType.MUTATING || mutationType == UiMutationType.EXCLUSIVE;
     }
+
+    /** @return conventional TestNG group for the mutation type. */
+    public String groupFor(UiMutationType mutationType) {
+        if (mutationType == null) {
+            return null;
+        }
+
+        return switch (mutationType) {
+            case NON_MUTATING -> UiTestGroups.NON_MUTATING;
+            case MUTATING -> UiTestGroups.MUTATING;
+            case EXCLUSIVE -> UiTestGroups.EXCLUSIVE;
+        };
+    }
 }

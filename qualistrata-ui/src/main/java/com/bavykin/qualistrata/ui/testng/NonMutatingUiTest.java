@@ -7,6 +7,8 @@ import java.lang.annotation.Target;
 
 /**
  * Marks a UI test that reads or navigates only and can normally run in parallel.
+ *
+ * <p>Equivalent TestNG group: {@link UiTestGroups#NON_MUTATING}.</p>
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.METHOD, ElementType.TYPE})
