@@ -337,3 +337,113 @@ tasks.register<Test>("uiMutatingTest") {
 
 This keeps the fast read-only suite parallel while preserving deterministic
 execution for data-changing tests.
+
+## Consumer fixture pattern
+
+`qualistrata-ui` provides an optional TestNG fixture layer for consumer
+projects that want a ready-to-use lifecycle instead of writing the same browser
+setup code in every module.
+
+The standard lifecycle is:
+
+```text
+BeforeClass
+  create UiTestRuntime
+  launch one heavy browser driver
+
+BeforeMethod
+  create isolated browser context
+  create primary UiSession for the test
+
+AfterMethod
+  close UiSession
+  close browser context
+
+AfterClass
+  close browser driver
+```
+
+The listener remains active as a safety net. If a test fails before the fixture
+closes the session, `QualiStrataUiTestListener` can still collect failure
+artifacts from `UiSessionRegistry` and close leaked sessions.
+
+### Minimal consumer base class
+
+Consumer projects can extend `AbstractQualiStrataUiTest` directly:
+
+```java
+public abstract class ProductUiTest extends AbstractQualiStrataUiTest {
+
+    @Override
+    protected UiRuntimeConfig uiRuntimeConfig() {
+        ResolvedTarget target = new QualiStrataConfig()
+                .resolveTarget(new TargetConfigResolutionRequest(
+                        Path.of("."),
+                        System.getProperties(),
+                        System.getenv(),
+                        "local",
+                        null
+                ));
+
+        ResolvedUiConfig ui = new AccessResolver(target.config(), target.secrets())
+                .ui("main");
+
+        return UiRuntimeConfigFactory.from(ui, System.getProperties());
+    }
+}
+```
+
+The exact target resolution helper may differ by consumer project. The important
+boundary is that `qualistrata-ui` receives an already resolved generic
+`ResolvedUiConfig`; product aliases and secrets remain in `qualistrata-core` and
+consumer configuration.
+
+### Example read-only test
+
+```java
+@NonMutatingUiTest
+public final class HomeSmokeTest extends ProductUiTest {
+
+    @Test(groups = UiTestGroups.NON_MUTATING)
+    public void homePageCanBeOpened() {
+        session().open("/");
+
+        new ProductHomePage(session())
+                .shouldBeOpened();
+    }
+}
+```
+
+A product page object should extend generic `BasePage` or a product-specific base
+page created in the consumer module:
+
+```java
+public final class ProductHomePage extends BasePage {
+
+    public ProductHomePage(UiSession session) {
+        super(session);
+    }
+
+    public ProductHomePage shouldBeOpened() {
+        titleShouldContain("Home");
+        return this;
+    }
+}
+```
+
+### When not to use the base class
+
+The fixture is optional. Consumer projects can still create their own lifecycle
+when they need advanced scenarios, such as multiple users in the same test,
+custom storage-state reuse, or product-specific login caching. In that case they
+should still use the same primitives:
+
+```text
+UiTestRuntime
+UiTestSession
+UiSessionRegistry
+QualiStrataUiTestListener
+```
+
+This keeps reporting, failure artifacts, and cleanup behaviour consistent across
+simple and advanced UI suites.
