@@ -1,14 +1,35 @@
-﻿import org.gradle.api.plugins.JavaPluginExtension
+import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.publish.PublishingExtension
 import org.gradle.api.publish.maven.MavenPublication
+import org.gradle.plugins.signing.SigningExtension
 
 plugins {
     `java-library`
 }
 
+val publishableProjectNames = setOf(
+    "qualistrata-core",
+    "qualistrata-db",
+    "qualistrata-unix",
+    "qualistrata-ui",
+    "qualistrata-perf"
+)
+
+val moduleDescriptions = mapOf(
+    "qualistrata-core" to "Core configuration, target resolution, resource model, and common primitives for QualiStrata automation projects.",
+    "qualistrata-db" to "Database automation support for QualiStrata, including JDBC client abstractions, diagnostics, and report dataset primitives.",
+    "qualistrata-unix" to "Unix and SSH automation support for QualiStrata, including command execution, session lifecycle, and environment checks.",
+    "qualistrata-ui" to "UI automation support for QualiStrata, including driver-independent page abstractions, locators, Playwright integration, and test framework adapters.",
+    "qualistrata-perf" to "Performance and telemetry support for QualiStrata, including lightweight timing, local telemetry artifacts, and safe telemetry publishing abstractions."
+)
+
+val qualistrataVersion = providers.gradleProperty("qualistrata.version")
+    .orElse("0.1.0-SNAPSHOT")
+    .get()
+
 allprojects {
     group = "com.bavykin.qualistrata"
-    version = "0.1.0-SNAPSHOT"
+    version = qualistrataVersion
 }
 
 subprojects {
@@ -92,8 +113,17 @@ subprojects {
         useJUnitPlatform()
     }
 
-    plugins.withId("java-library") {
+    /*
+     * Only real, consumer-validated framework modules are published.
+     *
+     * qualistrata-api is intentionally excluded from 0.1.0-alpha.1 because it is
+     * currently only a placeholder module. Publishing placeholders creates noisy
+     * Maven Central coordinates and makes the public API surface look larger than
+     * it actually is.
+     */
+    if (name in publishableProjectNames) {
         apply(plugin = "maven-publish")
+        apply(plugin = "signing")
 
         extensions.configure<JavaPluginExtension>("java") {
             withSourcesJar()
@@ -106,14 +136,14 @@ subprojects {
                     from(components["java"])
 
                     pom {
-                        name.set(project.name)
-                        description.set("QualiStrata test automation accelerator module: ${project.name}")
+                        name.set("QualiStrata ${project.name.removePrefix("qualistrata-").replaceFirstChar { it.uppercase() }}")
+                        description.set(moduleDescriptions.getValue(project.name))
                         url.set("https://github.com/obavykin/qualistrata")
 
                         licenses {
                             license {
                                 name.set("Apache License, Version 2.0")
-                                url.set("https://www.apache.org/licenses/LICENSE-2.0")
+                                url.set("https://www.apache.org/licenses/LICENSE-2.0.txt")
                             }
                         }
 
@@ -148,6 +178,37 @@ subprojects {
                     )
                 }
             }
+        }
+
+        extensions.configure<SigningExtension>("signing") {
+            val signingKey = providers.gradleProperty("signingKey")
+                .orElse(providers.environmentVariable("SIGNING_KEY"))
+                .orNull
+            val signingPassword = providers.gradleProperty("signingPassword")
+                .orElse(providers.environmentVariable("SIGNING_PASSWORD"))
+                .orNull
+
+            val releasePublishRequested = gradle.startParameter.taskNames.any { taskName ->
+                taskName.contains("publish", ignoreCase = true) &&
+                    !taskName.contains("MavenLocal", ignoreCase = true) &&
+                    !taskName.contains("QualiStrataLocal", ignoreCase = true)
+            }
+
+            /*
+             * Local Maven publication must stay simple for consumer validation:
+             * ./gradlew publishToMavenLocal -Pqualistrata.version=0.1.0-alpha.1
+             *
+             * Remote release publication, however, must be signed. The actual
+             * Central Portal repository task will be added later, so this guard is
+             * based on the requested task names rather than a specific repository.
+             */
+            isRequired = releasePublishRequested && !version.toString().endsWith("SNAPSHOT")
+
+            if (!signingKey.isNullOrBlank()) {
+                useInMemoryPgpKeys(signingKey, signingPassword)
+            }
+
+            sign(extensions.getByType(PublishingExtension::class).publications)
         }
     }
 }
