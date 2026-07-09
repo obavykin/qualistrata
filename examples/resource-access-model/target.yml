@@ -1,0 +1,58 @@
+env: demo
+
+resources:
+  ui:
+    application:
+      type: web-ui
+      baseUrl: https://app.demo.test
+      defaultAccess: admin
+
+  unix:
+    app-host:
+      role: application
+      host: app.demo.test
+      port: 22
+      defaultAccess: app-user
+      commandTimeoutSeconds: 60
+      shellProfile: /opt/demo/app/.profile
+      pool:
+        size: 5
+        keepAliveSeconds: 300
+        borrowTimeoutSeconds: 60
+
+    db-host:
+      role: database
+      host: db.demo.test
+      port: 22
+      defaultAccess: oracle-os-user
+      commandTimeoutSeconds: 60
+      shellProfile: /opt/oracle/.profile
+      pool:
+        size: 5
+        keepAliveSeconds: 300
+        borrowTimeoutSeconds: 60
+
+  databases:
+    main:
+      type: oracle
+      host: db.demo.test
+      port: 1521
+      databaseName: DEMO
+      connectionMode: sid
+      defaultAccess: app-db-user
+      connectionTimeoutSeconds: 30
+      queryTimeoutSeconds: 30
+      pool:
+        enabled: false
+        size: 5
+        borrowTimeoutSeconds: 30
+        idleTimeoutSeconds: 300
+
+  metrics:
+    automation-metrics:
+      type: influxdb
+      enabled: false
+      url: http://influxdb:8086
+      org: demo
+      bucket: automation
+      defaultAccess: writer

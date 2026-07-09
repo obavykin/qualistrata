@@ -4,13 +4,13 @@
 .gradle/
 build/
 **/build/
-!gradle/wrapper/gradle-wrapper.jar
 
 # ---------------------------------------------------------------------------
 # Java / JVM
 # ---------------------------------------------------------------------------
 *.class
 *.jar
+!gradle/wrapper/gradle-wrapper.jar
 *.war
 *.ear
 *.nar
