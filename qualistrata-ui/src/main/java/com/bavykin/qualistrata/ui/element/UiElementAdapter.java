@@ -15,6 +15,15 @@ public interface UiElementAdapter {
     /** Fills editable element with text. */
     void fill(String value);
 
+    /** Selects option by value in a native select-like control. */
+    void selectByValue(String value);
+
+    /** Selects option by visible label in a native select-like control. */
+    void selectByLabel(String label);
+
+    /** Selects option by zero-based index in a native select-like control. */
+    void selectByIndex(int index);
+
     /** @return visible text. */
     String text();
 

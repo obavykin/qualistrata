@@ -2,6 +2,7 @@ package com.bavykin.qualistrata.ui.playwright;
 
 import com.bavykin.qualistrata.ui.element.UiElementAdapter;
 import com.microsoft.playwright.Locator;
+import com.microsoft.playwright.options.SelectOption;
 
 /**
  * Playwright implementation of the generic element adapter.
@@ -31,6 +32,21 @@ public final class PlaywrightElementAdapter implements UiElementAdapter {
     @Override
     public void fill(String value) {
         locator.fill(value == null ? "" : value);
+    }
+
+    @Override
+    public void selectByValue(String value) {
+        locator.selectOption(value == null ? "" : value);
+    }
+
+    @Override
+    public void selectByLabel(String label) {
+        locator.selectOption(new SelectOption().setLabel(label == null ? "" : label));
+    }
+
+    @Override
+    public void selectByIndex(int index) {
+        locator.selectOption(new SelectOption().setIndex(index));
     }
 
     @Override

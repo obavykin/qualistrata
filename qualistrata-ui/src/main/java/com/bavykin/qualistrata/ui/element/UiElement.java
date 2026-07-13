@@ -36,6 +36,33 @@ public final class UiElement {
         adapter.fill(value);
     }
 
+    /**
+     * Selects an option in a native select-like control by option value.
+     *
+     * @param value option value attribute to select.
+     */
+    public void selectByValue(String value) {
+        adapter.selectByValue(value);
+    }
+
+    /**
+     * Selects an option in a native select-like control by visible option label.
+     *
+     * @param label visible option label to select.
+     */
+    public void selectByLabel(String label) {
+        adapter.selectByLabel(label);
+    }
+
+    /**
+     * Selects an option in a native select-like control by zero-based option index.
+     *
+     * @param index zero-based option index to select.
+     */
+    public void selectByIndex(int index) {
+        adapter.selectByIndex(index);
+    }
+
     /** @return visible text. */
     public String text() {
         return adapter.text();

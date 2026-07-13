@@ -42,6 +42,9 @@ class UiElementCollectionTest {
         @Override public void click() { }
         @Override public void fill(String value) { }
         @Override public String text() { return values.get(index); }
+        @Override public void selectByValue(String value) { }
+        @Override public void selectByLabel(String label) { }
+        @Override public void selectByIndex(int index) { }
         @Override public boolean isVisible() { return true; }
         @Override public void waitUntilVisible() { }
         @Override public int count() { return values.size(); }
