@@ -2,6 +2,8 @@ package com.bavykin.qualistrata.ui.element;
 
 import org.testng.annotations.Test;
 
+import java.util.List;
+
 import static org.testng.Assert.assertEquals;
 
 /**
@@ -68,6 +70,16 @@ public class UiElementSelectTest {
         @Override
         public void selectByIndex(int index) {
             selectedByIndex = index;
+        }
+
+        @Override
+        public List<String> optionValues() {
+            return List.of();
+        }
+
+        @Override
+        public List<String> optionLabels() {
+            return List.of();
         }
 
         @Override

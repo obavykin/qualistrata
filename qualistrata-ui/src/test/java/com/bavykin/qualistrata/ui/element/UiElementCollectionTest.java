@@ -45,6 +45,8 @@ class UiElementCollectionTest {
         @Override public void selectByValue(String value) { }
         @Override public void selectByLabel(String label) { }
         @Override public void selectByIndex(int index) { }
+        @Override public List<String> optionValues() { return List.of(); }
+        @Override public List<String> optionLabels() { return List.of(); }
         @Override public boolean isVisible() { return true; }
         @Override public void waitUntilVisible() { }
         @Override public int count() { return values.size(); }

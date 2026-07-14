@@ -4,6 +4,8 @@ import com.bavykin.qualistrata.ui.element.UiElementAdapter;
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.options.SelectOption;
 
+import java.util.List;
+
 /**
  * Playwright implementation of the generic element adapter.
  */
@@ -50,6 +52,20 @@ public final class PlaywrightElementAdapter implements UiElementAdapter {
     }
 
     @Override
+    public List<String> optionValues() {
+        return locator.locator("option").all().stream()
+                .map(option -> normalizeOptionValue(option.getAttribute("value")))
+                .toList();
+    }
+
+    @Override
+    public List<String> optionLabels() {
+        return locator.locator("option").all().stream()
+                .map(option -> normalizeOptionValue(option.textContent()))
+                .toList();
+    }
+
+    @Override
     public String text() {
         return locator.textContent();
     }
@@ -72,5 +88,9 @@ public final class PlaywrightElementAdapter implements UiElementAdapter {
     @Override
     public UiElementAdapter nth(int index) {
         return new PlaywrightElementAdapter(locator.nth(index));
+    }
+
+    private static String normalizeOptionValue(String value) {
+        return value == null ? "" : value;
     }
 }

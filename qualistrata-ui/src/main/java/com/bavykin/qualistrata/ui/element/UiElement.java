@@ -2,6 +2,8 @@ package com.bavykin.qualistrata.ui.element;
 
 import com.bavykin.qualistrata.ui.UiAutomationException;
 
+import java.util.List;
+
 /**
  * Driver-independent UI element facade.
  */
@@ -61,6 +63,24 @@ public final class UiElement {
      */
     public void selectByIndex(int index) {
         adapter.selectByIndex(index);
+    }
+
+    /**
+     * Returns option value attributes from a native select-like control.
+     *
+     * @return immutable option values in DOM order.
+     */
+    public List<String> optionValues() {
+        return List.copyOf(adapter.optionValues());
+    }
+
+    /**
+     * Returns visible option labels from a native select-like control.
+     *
+     * @return immutable option labels in DOM order.
+     */
+    public List<String> optionLabels() {
+        return List.copyOf(adapter.optionLabels());
     }
 
     /** @return visible text. */

@@ -1,5 +1,7 @@
 package com.bavykin.qualistrata.ui.element;
 
+import java.util.List;
+
 /**
  * Native-engine adapter behind {@link UiElement}.
  *
@@ -23,6 +25,12 @@ public interface UiElementAdapter {
 
     /** Selects option by zero-based index in a native select-like control. */
     void selectByIndex(int index);
+
+    /** @return option value attributes in DOM order. */
+    List<String> optionValues();
+
+    /** @return visible option labels in DOM order. */
+    List<String> optionLabels();
 
     /** @return visible text. */
     String text();
