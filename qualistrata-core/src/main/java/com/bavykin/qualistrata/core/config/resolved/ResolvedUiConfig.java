@@ -37,28 +37,60 @@ public final class ResolvedUiConfig {
         this.token = token;
     }
 
-    /** @return UI resource alias. */
+    /**
+     * Returns the resource alias.
+     *
+     * @return UI resource alias.
+     */
     public String alias() { return alias; }
 
-    /** @return selected UI access profile alias. */
+    /**
+     * Returns the selected access profile alias.
+     *
+     * @return selected UI access profile alias.
+     */
     public String accessAlias() { return accessAlias; }
 
-    /** @return original non-secret UI resource configuration. */
+    /**
+     * Returns the original non-secret resource configuration.
+     *
+     * @return original non-secret UI resource configuration.
+     */
     public UiResourceConfig resource() { return resource; }
 
-    /** @return UI resource type. */
+    /**
+     * Returns the configured resource type.
+     *
+     * @return UI resource type.
+     */
     public String type() { return resource == null ? null : resource.type(); }
 
-    /** @return UI base URL. */
+    /**
+     * Returns the configured UI base URL.
+     *
+     * @return UI base URL.
+     */
     public String baseUrl() { return resource == null ? null : resource.baseUrl(); }
 
-    /** @return resolved UI username, or {@code null} when not configured. */
+    /**
+     * Returns the resolved username.
+     *
+     * @return resolved UI username, or {@code null} when not configured.
+     */
     public String username() { return username; }
 
-    /** @return resolved UI password, or {@code null} when not configured. */
+    /**
+     * Returns the resolved password.
+     *
+     * @return resolved UI password, or {@code null} when not configured.
+     */
     public SecretValue password() { return password; }
 
-    /** @return resolved UI token, or {@code null} when not configured. */
+    /**
+     * Returns the resolved token.
+     *
+     * @return resolved UI token, or {@code null} when not configured.
+     */
     public SecretValue token() { return token; }
 
     @Override
