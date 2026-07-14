@@ -17,7 +17,13 @@ public final class PlaywrightBrowserContext implements UiBrowserContext {
     private final UiRuntimeConfig config;
     private final UiCapabilities capabilities;
 
-    /** Creates wrapper around native Playwright context. */
+    /**
+     * Creates wrapper around native Playwright context.
+     *
+     * @param context native Playwright browser context.
+     * @param config effective UI runtime configuration.
+     * @param capabilities resolved browser capabilities.
+     */
     public PlaywrightBrowserContext(BrowserContext context, UiRuntimeConfig config, UiCapabilities capabilities) {
         this.context = context;
         this.config = config;

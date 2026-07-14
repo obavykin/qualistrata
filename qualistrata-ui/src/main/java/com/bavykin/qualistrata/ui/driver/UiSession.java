@@ -13,28 +13,62 @@ import com.bavykin.qualistrata.ui.locator.UiLocator;
  */
 public interface UiSession extends AutoCloseable {
 
-    /** Opens an absolute or base-URL-relative URL. */
+    /**
+     * Opens an absolute or base-URL-relative URL.
+     *
+     * @param urlOrPath absolute URL or application-relative path to open.
+     */
     void open(String urlOrPath);
 
-    /** @return current page URL. */
+    /**
+     * Returns the current page URL.
+     *
+     * @return current page URL.
+     */
     String url();
 
-    /** @return current page title. */
+    /**
+     * Returns the current page title.
+     *
+     * @return current page title.
+     */
     String title();
 
-    /** Resolves locator to a single element facade. */
+    /**
+     * Resolves locator to a single element facade.
+     *
+     * @param locator driver-independent element locator.
+     * @return the resulting value.
+     */
     UiElement element(UiLocator locator);
 
-    /** Resolves locator to collection facade. */
+    /**
+     * Resolves locator to collection facade.
+     *
+     * @param locator driver-independent element locator.
+     * @return the resulting value.
+     */
     UiElementCollection elements(UiLocator locator);
 
-    /** @return window/new-tab helper. */
+    /**
+     * Returns the window and tab helper.
+     *
+     * @return window/new-tab helper.
+     */
     WindowSupport windows();
 
-    /** @return download helper. */
+    /**
+     * Returns the download helper.
+     *
+     * @return download helper.
+     */
     DownloadSupport downloads();
 
-    /** @return active session capabilities. */
+    /**
+     * Returns active session capabilities.
+     *
+     * @return active session capabilities.
+     */
     UiCapabilities capabilities();
 
     /** Closes this page/window session. */

@@ -65,7 +65,11 @@ public class UiTestLifecycleListener implements ITestListener, ISuiteListener, I
         this(System.getProperties());
     }
 
-    /** Creates listener with explicit properties, useful for unit tests. */
+    /**
+     * Creates listener with explicit properties, useful for unit tests.
+     *
+     * @param properties runtime override properties.
+     */
     public UiTestLifecycleListener(Properties properties) {
         this(
                 properties,
@@ -75,7 +79,14 @@ public class UiTestLifecycleListener implements ITestListener, ISuiteListener, I
         );
     }
 
-    /** Creates listener with explicit collaborators, useful for tests and custom runners. */
+    /**
+     * Creates listener with explicit collaborators, useful for tests and custom runners.
+     *
+     * @param properties runtime override properties.
+     * @param reportDirectory directory where UI reports are written.
+     * @param artifactCollector collector used for test artifacts.
+     * @param reportWriters writers used to persist UI reports.
+     */
     public UiTestLifecycleListener(
             Properties properties,
             Path reportDirectory,
@@ -142,12 +153,20 @@ public class UiTestLifecycleListener implements ITestListener, ISuiteListener, I
         }
     }
 
-    /** @return immutable snapshot of test reports collected so far. */
+    /**
+     * Provides the tests operation.
+     *
+     * @return immutable snapshot of test reports collected so far.
+     */
     public List<UiTestReport> tests() {
         return List.copyOf(tests);
     }
 
-    /** @return aggregated report built from currently collected test entries. */
+    /**
+     * Provides the buildReport operation.
+     *
+     * @return aggregated report built from currently collected test entries.
+     */
     public UiRunReport buildReport() {
         Instant started = startedAt == null ? Instant.now() : startedAt;
         Instant now = Instant.now();

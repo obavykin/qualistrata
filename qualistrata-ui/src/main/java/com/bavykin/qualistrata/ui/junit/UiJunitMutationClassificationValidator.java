@@ -9,6 +9,13 @@ public final class UiJunitMutationClassificationValidator {
     private final UiJunitMutationClassifier classifier;
     private final UiJunitUnclassifiedTestPolicy unclassifiedPolicy;
 
+    /** Member. */
+    /**
+     * Creates a mutation-classification validator.
+     *
+     * @param classifier classifier used to resolve mutation metadata.
+     * @param unclassifiedPolicy policy applied when no mutation metadata is present.
+     */
     public UiJunitMutationClassificationValidator(
             UiJunitMutationClassifier classifier,
             UiJunitUnclassifiedTestPolicy unclassifiedPolicy
@@ -17,7 +24,13 @@ public final class UiJunitMutationClassificationValidator {
         this.unclassifiedPolicy = unclassifiedPolicy == null ? UiJunitUnclassifiedTestPolicy.ALLOW : unclassifiedPolicy;
     }
 
-    /** Validates method classification and returns the resolved classification. */
+    /**
+     * Validates method classification and returns the resolved classification.
+     *
+     * @param method method value.
+     * @param tags tags value.
+     * @return the resulting value.
+     */
     public UiJunitMutationClassification validate(Method method, Set<String> tags) {
         UiJunitMutationClassification classification = classifier.classification(method, tags);
         if (classification.conflicting()) {

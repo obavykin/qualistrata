@@ -8,7 +8,9 @@ package com.bavykin.qualistrata.ui.config;
  * where features overlap.</p>
  */
 public enum BrowserEngine {
+    /** Playwright browser engine. */
     PLAYWRIGHT,
+    /** Selenium browser engine. */
     SELENIUM;
 
     /**

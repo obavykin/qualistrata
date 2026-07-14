@@ -83,12 +83,20 @@ public final class UiElement {
         return List.copyOf(adapter.optionLabels());
     }
 
-    /** @return visible text. */
+    /**
+     * Returns visible element text.
+     *
+     * @return visible text.
+     */
     public String text() {
         return adapter.text();
     }
 
-    /** @return whether element is currently visible. */
+    /**
+     * Checks whether the element is currently visible.
+     *
+     * @return whether element is currently visible.
+     */
     public boolean isVisible() {
         return adapter.isVisible();
     }
@@ -112,7 +120,11 @@ public final class UiElement {
         return this;
     }
 
-    /** @return underlying adapter for framework extensions. */
+    /**
+     * Returns the underlying element adapter.
+     *
+     * @return underlying adapter for framework extensions.
+     */
     public UiElementAdapter adapter() {
         return adapter;
     }

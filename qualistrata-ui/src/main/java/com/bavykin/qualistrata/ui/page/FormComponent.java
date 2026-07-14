@@ -8,7 +8,12 @@ import com.bavykin.qualistrata.ui.locator.UiLocator;
  */
 public class FormComponent extends BaseComponent {
 
-    /** Creates form component. */
+    /**
+     * Creates form component.
+     *
+     * @param session active UI session.
+     * @param root root locator of the component.
+     */
     public FormComponent(UiSession session, UiLocator root) {
         super(session, root);
     }

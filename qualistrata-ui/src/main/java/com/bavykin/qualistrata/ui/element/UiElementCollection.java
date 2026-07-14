@@ -23,7 +23,11 @@ public final class UiElementCollection {
         this.adapter = adapter;
     }
 
-    /** @return current element count. */
+    /**
+     * Returns the represented element count.
+     *
+     * @return current element count.
+     */
     public int count() {
         return adapter.count();
     }
@@ -42,7 +46,11 @@ public final class UiElementCollection {
         return new UiElement(adapter.nth(index));
     }
 
-    /** @return visible text of all matched elements at the moment of call. */
+    /**
+     * Returns visible text for all matched elements.
+     *
+     * @return visible text of all matched elements at the moment of call.
+     */
     public List<String> texts() {
         List<String> values = new ArrayList<>();
         for (int i = 0; i < count(); i++) {

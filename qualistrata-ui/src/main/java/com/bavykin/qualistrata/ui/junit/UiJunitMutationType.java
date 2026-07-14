@@ -8,7 +8,10 @@ package com.bavykin.qualistrata.ui.junit;
  * non-mutating tests.</p>
  */
 public enum UiJunitMutationType {
+    /** Non Mutating. */
     NON_MUTATING,
+    /** Mutating. */
     MUTATING,
+    /** Exclusive. */
     EXCLUSIVE
 }

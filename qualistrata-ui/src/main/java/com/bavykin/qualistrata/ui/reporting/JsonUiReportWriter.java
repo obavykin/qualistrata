@@ -14,6 +14,12 @@ import java.nio.file.Path;
  */
 public final class JsonUiReportWriter implements UiReportWriter {
 
+    /**
+     * Creates a JSON UI report writer.
+     */
+    public JsonUiReportWriter() {
+    }
+
     private final ObjectMapper mapper = new ObjectMapper()
             .registerModule(new JavaTimeModule())
             .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)

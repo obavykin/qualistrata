@@ -13,6 +13,12 @@ import com.bavykin.qualistrata.ui.driver.UiDriverFactory;
  */
 public final class SeleniumUiDriverFactory implements UiDriverFactory {
 
+    /**
+     * Creates a SeleniumUiDriverFactory instance.
+     */
+    public SeleniumUiDriverFactory() {
+    }
+
     @Override
     public UiDriver create(UiRuntimeConfig config) {
         throw new UiAutomationException(

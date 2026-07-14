@@ -17,7 +17,12 @@ public final class UiTestSession implements AutoCloseable {
     private final UiSession session;
     private boolean closed;
 
-    /** Creates a lifecycle handle for one test-owned context/session pair. */
+    /**
+     * Creates a lifecycle handle for one test-owned context/session pair.
+     *
+     * @param context browser context owned by this lifecycle handle.
+     * @param session UI session owned by this lifecycle handle.
+     */
     public UiTestSession(UiBrowserContext context, UiSession session) {
         if (context == null) {
             throw new IllegalArgumentException("UI browser context must not be null.");
@@ -30,17 +35,29 @@ public final class UiTestSession implements AutoCloseable {
         this.session = session;
     }
 
-    /** @return isolated browser context created for the test. */
+    /**
+     * Provides the context operation.
+     *
+     * @return isolated browser context created for the test.
+     */
     public UiBrowserContext context() {
         return context;
     }
 
-    /** @return primary UI session/page created for the test. */
+    /**
+     * Returns the primary UI session for the current test method.
+     *
+     * @return primary UI session/page created for the test.
+     */
     public UiSession session() {
         return session;
     }
 
-    /** @return whether this handle has already been closed. */
+    /**
+     * Provides the closed operation.
+     *
+     * @return whether this handle has already been closed.
+     */
     public boolean closed() {
         return closed;
     }

@@ -18,7 +18,12 @@ public final class DefaultUiDriverFactory implements UiDriverFactory {
         this(new PlaywrightUiDriverFactory(), new SeleniumUiDriverFactory());
     }
 
-    /** Creates factory with explicit engine implementations, useful for tests. */
+    /**
+     * Creates factory with explicit engine implementations, useful for tests.
+     *
+     * @param playwrightFactory factory for the Playwright engine.
+     * @param seleniumFactory factory for the Selenium engine.
+     */
     public DefaultUiDriverFactory(UiDriverFactory playwrightFactory, UiDriverFactory seleniumFactory) {
         this.playwrightFactory = require(playwrightFactory, "Playwright UI driver factory");
         this.seleniumFactory = require(seleniumFactory, "Selenium UI driver factory");

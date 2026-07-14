@@ -13,7 +13,9 @@ import com.bavykin.qualistrata.ui.locator.UiLocator;
  */
 public abstract class BaseComponent {
 
+    /** Active UI session. */
     protected final UiSession session;
+    /** Root locator of this component. */
     protected final UiLocator root;
 
     /**
@@ -35,7 +37,11 @@ public abstract class BaseComponent {
         this.root = root;
     }
 
-    /** @return root element facade. */
+    /**
+     * Returns the root element facade.
+     *
+     * @return root element facade.
+     */
     public UiElement root() {
         return session.element(root);
     }

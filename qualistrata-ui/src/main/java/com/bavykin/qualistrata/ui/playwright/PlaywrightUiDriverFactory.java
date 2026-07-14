@@ -14,6 +14,12 @@ import com.microsoft.playwright.Playwright;
  */
 public final class PlaywrightUiDriverFactory implements UiDriverFactory {
 
+    /**
+     * Creates a Playwright UI driver factory.
+     */
+    public PlaywrightUiDriverFactory() {
+    }
+
     @Override
     public UiDriver create(UiRuntimeConfig config) {
         if (config == null) {

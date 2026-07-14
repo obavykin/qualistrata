@@ -8,4 +8,10 @@ package com.bavykin.qualistrata.ui.testng;
  * declarations.</p>
  */
 public final class QualiStrataUiTestListener extends UiTestLifecycleListener {
+
+    /**
+     * Creates a QualiStrataUiTestListener instance.
+     */
+    public QualiStrataUiTestListener() {
+    }
 }

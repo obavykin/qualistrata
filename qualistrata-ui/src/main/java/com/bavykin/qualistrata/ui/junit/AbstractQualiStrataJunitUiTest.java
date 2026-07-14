@@ -23,10 +23,20 @@ import org.junit.jupiter.api.extension.ExtendWith;
 @ExtendWith(QualiStrataJunitUiExtension.class)
 public abstract class AbstractQualiStrataJunitUiTest {
 
+    /**
+     * Creates a JUnit UI test fixture.
+     */
+    public AbstractQualiStrataJunitUiTest() {
+    }
+
     private UiTestRuntime runtime;
     private final ThreadLocal<UiTestSession> currentTestSession = new ThreadLocal<>();
 
-    /** Supplies effective UI runtime configuration. */
+    /**
+     * Supplies effective UI runtime configuration.
+     *
+     * @return the resulting value.
+     */
     protected abstract UiRuntimeConfig uiRuntimeConfig();
 
     /** Creates the heavy browser runtime once for this JUnit class instance. */
@@ -60,7 +70,11 @@ public abstract class AbstractQualiStrataJunitUiTest {
         }
     }
 
-    /** @return active runtime for advanced consumer fixture code. */
+    /**
+     * Returns the active UI runtime.
+     *
+     * @return active runtime for advanced consumer fixture code.
+     */
     protected UiTestRuntime runtime() {
         if (runtime == null) {
             throw new IllegalStateException("QualiStrata UI runtime has not been initialised yet.");
@@ -68,7 +82,11 @@ public abstract class AbstractQualiStrataJunitUiTest {
         return runtime;
     }
 
-    /** @return current test lifecycle handle. */
+    /**
+     * Returns the current test lifecycle handle.
+     *
+     * @return current test lifecycle handle.
+     */
     protected UiTestSession testSession() {
         UiTestSession testSession = currentTestSession.get();
         if (testSession == null) {
@@ -77,7 +95,11 @@ public abstract class AbstractQualiStrataJunitUiTest {
         return testSession;
     }
 
-    /** @return primary UI session/page for the current test method. */
+    /**
+     * Returns the primary UI session for the current test method.
+     *
+     * @return primary UI session/page for the current test method.
+     */
     protected UiSession session() {
         return testSession().session();
     }

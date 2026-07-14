@@ -16,7 +16,9 @@ public record UiLocator(
         String value,
         String role
 ) {
-    /** Creates a validated locator. */
+    /**
+     * Creates a validated locator.
+     */
     public UiLocator {
         if (type == null) {
             throw new IllegalArgumentException("Locator type must not be null.");
@@ -27,53 +29,98 @@ public record UiLocator(
         }
     }
 
-    /** @param selector CSS selector. @return CSS locator. */
+    /**
+     * Creates a CSS locator.
+     *
+     * @param selector CSS selector.
+     * @return CSS locator.
+     */
     public static UiLocator css(String selector) {
         return new UiLocator(LocatorType.CSS, selector, null);
     }
 
-    /** @param expression XPath expression. @return XPath locator. */
+    /**
+     * Creates an XPath locator.
+     *
+     * @param expression XPath expression.
+     * @return XPath locator.
+     */
     public static UiLocator xpath(String expression) {
         return new UiLocator(LocatorType.XPATH, expression, null);
     }
 
-    /** @param text visible text. @return text locator. */
+    /**
+     * Creates a visible-text locator.
+     *
+     * @param text visible text.
+     * @return text locator.
+     */
     public static UiLocator text(String text) {
         return new UiLocator(LocatorType.TEXT, text, null);
     }
 
-    /** @param text link text. @return link locator. */
+    /**
+     * Creates a link-text locator.
+     *
+     * @param text link text.
+     * @return link locator.
+     */
     public static UiLocator link(String text) {
         return new UiLocator(LocatorType.LINK, text, null);
     }
 
-    /** @param text button text. @return button locator. */
+    /**
+     * Creates a button-text locator.
+     *
+     * @param text button text.
+     * @return button locator.
+     */
     public static UiLocator button(String text) {
         return new UiLocator(LocatorType.BUTTON, text, null);
     }
 
-    /** @param label input label. @return input-by-label locator. */
+    /**
+     * Creates an input-by-label locator.
+     *
+     * @param label input label.
+     * @return input-by-label locator.
+     */
     public static UiLocator inputByLabel(String label) {
         return new UiLocator(LocatorType.INPUT_BY_LABEL, label, null);
     }
 
-    /** @param label label text. @return label locator. */
+    /**
+     * Creates a label-text locator.
+     *
+     * @param label label text.
+     * @return label locator.
+     */
     public static UiLocator label(String label) {
         return new UiLocator(LocatorType.LABEL, label, null);
     }
 
-    /** @param placeholder input placeholder. @return placeholder locator. */
+    /**
+     * Creates a placeholder locator.
+     *
+     * @param placeholder input placeholder.
+     * @return placeholder locator.
+     */
     public static UiLocator placeholder(String placeholder) {
         return new UiLocator(LocatorType.PLACEHOLDER, placeholder, null);
     }
 
-    /** @param testId test id value. @return test-id locator. */
+    /**
+     * Creates a test-id locator.
+     *
+     * @param testId test id value.
+     * @return test-id locator.
+     */
     public static UiLocator testId(String testId) {
         return new UiLocator(LocatorType.TEST_ID, testId, null);
     }
 
     /**
-     * Creates ARIA role locator.
+     * Creates an ARIA-role locator.
      *
      * @param role ARIA role name supported by the selected adapter.
      * @param name accessible name.

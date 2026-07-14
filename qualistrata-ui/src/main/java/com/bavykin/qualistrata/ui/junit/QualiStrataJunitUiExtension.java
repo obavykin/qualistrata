@@ -67,7 +67,11 @@ public class QualiStrataJunitUiExtension implements BeforeAllCallback, BeforeTes
         this(System.getProperties());
     }
 
-    /** Creates extension with explicit properties, useful for unit tests. */
+    /**
+     * Creates extension with explicit properties, useful for unit tests.
+     *
+     * @param properties runtime override properties.
+     */
     public QualiStrataJunitUiExtension(Properties properties) {
         this(
                 properties,
@@ -77,7 +81,14 @@ public class QualiStrataJunitUiExtension implements BeforeAllCallback, BeforeTes
         );
     }
 
-    /** Creates extension with explicit collaborators, useful for tests and custom runners. */
+    /**
+     * Creates extension with explicit collaborators, useful for tests and custom runners.
+     *
+     * @param properties runtime override properties.
+     * @param reportDirectory directory where UI reports are written.
+     * @param artifactCollector collector used for test artifacts.
+     * @param reportWriters writers used to persist UI reports.
+     */
     public QualiStrataJunitUiExtension(
             Properties properties,
             Path reportDirectory,
@@ -138,12 +149,20 @@ public class QualiStrataJunitUiExtension implements BeforeAllCallback, BeforeTes
         record(context, UiTestStatus.SKIPPED, Instant.now(), reason.map(DisabledTestException::new).orElse(null));
     }
 
-    /** @return immutable snapshot of test reports collected so far. */
+    /**
+     * Returns immutable snapshot of test reports collected so far.
+     *
+     * @return immutable snapshot of test reports collected so far.
+     */
     public List<UiTestReport> tests() {
         return List.copyOf(tests);
     }
 
-    /** @return aggregated report built from currently collected test entries. */
+    /**
+     * Provides the buildReport operation.
+     *
+     * @return aggregated report built from currently collected test entries.
+     */
     public UiRunReport buildReport() {
         Instant started = startedAt == null ? Instant.now() : startedAt;
         Instant now = Instant.now();

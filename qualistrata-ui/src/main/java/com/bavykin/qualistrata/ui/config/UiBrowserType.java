@@ -4,10 +4,15 @@ package com.bavykin.qualistrata.ui.config;
  * Browser family requested by UI tests.
  */
 public enum UiBrowserType {
+    /** Chromium. */
     CHROMIUM,
+    /** Firefox. */
     FIREFOX,
+    /** Webkit. */
     WEBKIT,
+    /** Chrome. */
     CHROME,
+    /** Edge. */
     EDGE;
 
     /**

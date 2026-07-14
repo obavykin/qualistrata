@@ -24,6 +24,12 @@ import org.testng.annotations.Listeners;
 @Listeners(QualiStrataUiTestListener.class)
 public abstract class AbstractQualiStrataUiTest {
 
+    /**
+     * Creates a TestNG UI test fixture.
+     */
+    public AbstractQualiStrataUiTest() {
+    }
+
     private UiTestRuntime runtime;
     private final ThreadLocal<UiTestSession> currentTestSession = new ThreadLocal<>();
 
@@ -33,6 +39,8 @@ public abstract class AbstractQualiStrataUiTest {
      * <p>Typical consumer implementations create this from a resolved
      * {@code ResolvedUiConfig} using {@link UiTestRuntime#fromSystemProperties} or
      * {@code UiRuntimeConfigFactory.from(...)}.</p>
+     *
+     * @return the resulting value.
      */
     protected abstract UiRuntimeConfig uiRuntimeConfig();
 
@@ -67,7 +75,11 @@ public abstract class AbstractQualiStrataUiTest {
         }
     }
 
-    /** @return active runtime for advanced consumer fixture code. */
+    /**
+     * Returns the active UI runtime.
+     *
+     * @return active runtime for advanced consumer fixture code.
+     */
     protected UiTestRuntime runtime() {
         if (runtime == null) {
             throw new IllegalStateException("QualiStrata UI runtime has not been initialised yet.");
@@ -75,7 +87,11 @@ public abstract class AbstractQualiStrataUiTest {
         return runtime;
     }
 
-    /** @return current test lifecycle handle. */
+    /**
+     * Returns the current test lifecycle handle.
+     *
+     * @return current test lifecycle handle.
+     */
     protected UiTestSession testSession() {
         UiTestSession testSession = currentTestSession.get();
         if (testSession == null) {
@@ -84,7 +100,11 @@ public abstract class AbstractQualiStrataUiTest {
         return testSession;
     }
 
-    /** @return primary UI session/page for the current test method. */
+    /**
+     * Returns the primary UI session for the current test method.
+     *
+     * @return primary UI session/page for the current test method.
+     */
     protected UiSession session() {
         return testSession().session();
     }
