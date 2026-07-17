@@ -31,6 +31,7 @@ public abstract class AbstractQualiStrataJunitUiTest {
 
     private UiTestRuntime runtime;
     private final ThreadLocal<UiTestSession> currentTestSession = new ThreadLocal<>();
+    private final ThreadLocal<ManagedTestResources> currentManagedResources = new ThreadLocal<>();
 
     /**
      * Supplies effective UI runtime configuration.
@@ -45,19 +46,65 @@ public abstract class AbstractQualiStrataJunitUiTest {
         runtime = UiTestRuntime.create(uiRuntimeConfig());
     }
 
-    /** Creates a fresh isolated context/session for the next test method. */
+    /**
+     * Creates a fresh isolated context/session and managed-resource registry for
+     * the next test method.
+     *
+     * <p>The registry is created before consumer test code executes, so any
+     * {@link AutoCloseable} returned by a page flow may be registered through
+     * {@link #manage(AutoCloseable)} immediately after it is opened.</p>
+     */
     @BeforeEach
     void setUpQualiStrataUiSession() {
         currentTestSession.set(runtime().newTestSession());
+        currentManagedResources.set(new ManagedTestResources());
     }
 
-    /** Closes the current test context/session even when the test failed. */
+    /**
+     * Closes all resources registered by the current test and then closes the
+     * isolated UI test session.
+     *
+     * <p>Managed resources are closed in reverse registration order. This mirrors
+     * nested acquisition order and ensures child windows, dialogs, temporary
+     * sessions and similar resources are released before their owning browser
+     * context. Cleanup continues after an individual close failure; subsequent
+     * failures are attached as suppressed exceptions to the first failure.</p>
+     *
+     * <p>The thread-local state is removed before cleanup starts. A failing
+     * resource therefore cannot leak lifecycle state into a later test method.</p>
+     */
     @AfterEach
     void tearDownQualiStrataUiSession() {
+        ManagedTestResources managedResources = currentManagedResources.get();
         UiTestSession testSession = currentTestSession.get();
+
+        currentManagedResources.remove();
         currentTestSession.remove();
+
+        RuntimeException cleanupFailure = null;
+
+        if (managedResources != null) {
+            try {
+                managedResources.close();
+            } catch (RuntimeException failure) {
+                cleanupFailure = failure;
+            }
+        }
+
         if (testSession != null) {
-            testSession.close();
+            try {
+                testSession.close();
+            } catch (RuntimeException failure) {
+                if (cleanupFailure == null) {
+                    cleanupFailure = failure;
+                } else {
+                    cleanupFailure.addSuppressed(failure);
+                }
+            }
+        }
+
+        if (cleanupFailure != null) {
+            throw cleanupFailure;
         }
     }
 
@@ -68,6 +115,40 @@ public abstract class AbstractQualiStrataJunitUiTest {
             runtime.close();
             runtime = null;
         }
+    }
+
+
+    /**
+     * Registers a test-owned resource for automatic cleanup after the current
+     * test method.
+     *
+     * <p>The same resource instance is returned so registration can be embedded
+     * directly into fluent setup code:</p>
+     *
+     * <pre>{@code
+     * ReportFlow report = manage(reportDsl.open());
+     * }</pre>
+     *
+     * <p>Resources are closed in reverse registration order before the isolated
+     * UI session is closed. Register only resources owned by the current test.
+     * Shared class-level runtimes and objects managed elsewhere must not be
+     * registered here.</p>
+     *
+     * @param resource non-null resource owned by the current test method.
+     * @param <T> concrete resource type.
+     * @return the same resource instance.
+     * @throws NullPointerException when {@code resource} is {@code null}.
+     * @throws IllegalStateException when called outside an active test-method lifecycle.
+     */
+    protected final <T extends AutoCloseable> T manage(T resource) {
+        ManagedTestResources managedResources = currentManagedResources.get();
+        if (managedResources == null) {
+            throw new IllegalStateException(
+                    "QualiStrata managed-resource lifecycle has not been initialised "
+                            + "for the current test method."
+            );
+        }
+        return managedResources.register(resource);
     }
 
     /**
