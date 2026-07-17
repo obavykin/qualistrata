@@ -21,5 +21,6 @@ include(
     "qualistrata-api",
     "qualistrata-db",
     "qualistrata-unix",
-    "qualistrata-perf"
+    "qualistrata-perf",
+    "qualistrata-report"
 )
