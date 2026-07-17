@@ -15,4 +15,4 @@
 
 The neutral packages must not import JUnit, TestNG, Playwright, Selenium, or consumer-project classes. Framework adapters translate native lifecycle events into the common reporting model.
 
-This initial module skeleton deliberately contains no listener registration or public reporting model. Those APIs will be added incrementally together with their unit tests.
+The module is implemented incrementally. The first public model contract is the framework-neutral `TestStatus` enumeration. Listener registration, execution models, writers, and framework adapters are added only together with their unit tests.
