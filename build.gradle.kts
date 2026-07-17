@@ -12,7 +12,8 @@ val publishableProjectNames = setOf(
     "qualistrata-db",
     "qualistrata-unix",
     "qualistrata-ui",
-    "qualistrata-perf"
+    "qualistrata-perf",
+    "qualistrata-report"
 )
 
 val moduleDescriptions = mapOf(
@@ -20,7 +21,8 @@ val moduleDescriptions = mapOf(
     "qualistrata-db" to "Database automation support for QualiStrata, including JDBC client abstractions, diagnostics, and report dataset primitives.",
     "qualistrata-unix" to "Unix and SSH automation support for QualiStrata, including command execution, session lifecycle, and environment checks.",
     "qualistrata-ui" to "UI automation support for QualiStrata, including driver-independent page abstractions, locators, Playwright integration, and test framework adapters.",
-    "qualistrata-perf" to "Performance and telemetry support for QualiStrata, including lightweight timing, local telemetry artifacts, and safe telemetry publishing abstractions."
+    "qualistrata-perf" to "Performance and telemetry support for QualiStrata, including lightweight timing, local telemetry artifacts, and safe telemetry publishing abstractions.",
+    "qualistrata-report" to "Framework-neutral test execution reporting for QualiStrata consumers, including canonical JSON artifacts and JUnit Platform integration."
 )
 
 val qualistrataVersion = providers.gradleProperty("qualistrata.version")
