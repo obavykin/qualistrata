@@ -13,12 +13,14 @@ import java.util.Set;
  * @param displayName human-readable framework display name
  * @param parameters safely serialized invocation parameters
  * @param tags framework tags or groups associated with the invocation
+ * @param metadata optional annotation-derived test metadata
  */
 public record TestDescriptor(
         TestIdentifier identifier,
         String displayName,
         Map<String, String> parameters,
-        Set<String> tags
+        Set<String> tags,
+        TestMetadata metadata
 ) {
 
     /**
@@ -29,6 +31,24 @@ public record TestDescriptor(
         displayName = requireText(displayName, "displayName");
         parameters = immutableParameters(parameters);
         tags = immutableTags(tags);
+        metadata = metadata == null ? TestMetadata.EMPTY : metadata;
+    }
+
+    /**
+     * Creates a descriptor without optional annotation-derived metadata.
+     *
+     * @param identifier stable invocation identity
+     * @param displayName human-readable framework display name
+     * @param parameters safely serialized invocation parameters
+     * @param tags framework tags or groups associated with the invocation
+     */
+    public TestDescriptor(
+            TestIdentifier identifier,
+            String displayName,
+            Map<String, String> parameters,
+            Set<String> tags
+    ) {
+        this(identifier, displayName, parameters, tags, TestMetadata.EMPTY);
     }
 
     private static Map<String, String> immutableParameters(Map<String, String> parameters) {

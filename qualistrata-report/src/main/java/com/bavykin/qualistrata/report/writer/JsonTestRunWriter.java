@@ -6,7 +6,9 @@ import com.bavykin.qualistrata.report.model.LogicalTestResult;
 import com.bavykin.qualistrata.report.model.TestAttempt;
 import com.bavykin.qualistrata.report.model.TestDescriptor;
 import com.bavykin.qualistrata.report.model.TestExecutionResult;
+import com.bavykin.qualistrata.report.model.TestCaseReference;
 import com.bavykin.qualistrata.report.model.TestIdentifier;
+import com.bavykin.qualistrata.report.model.TestMetadata;
 import com.bavykin.qualistrata.report.model.TestRun;
 import com.bavykin.qualistrata.report.model.TestRunSummary;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -197,6 +199,35 @@ public final class JsonTestRunWriter implements TestRunWriter {
                 .sorted()
                 .forEach(tags::add);
 
+        node.set("metadata", testMetadataNode(descriptor.metadata()));
+        return node;
+    }
+
+    private ObjectNode testMetadataNode(TestMetadata metadata) {
+        ObjectNode node = objectMapper.createObjectNode();
+        putNullable(node, "description", metadata.description());
+        putNullable(node, "feature", metadata.feature());
+        putNullable(node, "component", metadata.component());
+
+        ArrayNode coveredTestCases = node.putArray("coveredTestCases");
+        metadata.coveredTestCases().stream()
+                .sorted(Comparator
+                        .comparing(TestCaseReference::id)
+                        .thenComparing(reference ->
+                                reference.system() == null
+                                        ? ""
+                                        : reference.system()
+                        ))
+                .map(this::testCaseReferenceNode)
+                .forEach(coveredTestCases::add);
+
+        return node;
+    }
+
+    private ObjectNode testCaseReferenceNode(TestCaseReference reference) {
+        ObjectNode node = objectMapper.createObjectNode();
+        node.put("id", reference.id());
+        putNullable(node, "system", reference.system());
         return node;
     }
 
