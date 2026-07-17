@@ -40,6 +40,7 @@ class ManagedTestResourcesTest {
      * exceptions.
      */
     @Test
+    @SuppressWarnings("resource")
     void shouldContinueCleanupAndAggregateFailures() {
         ManagedTestResources resources = new ManagedTestResources();
         List<String> closeOrder = new ArrayList<>();

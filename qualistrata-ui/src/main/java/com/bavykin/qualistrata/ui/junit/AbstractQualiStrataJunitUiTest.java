@@ -55,6 +55,7 @@ public abstract class AbstractQualiStrataJunitUiTest {
      * {@link #manage(AutoCloseable)} immediately after it is opened.</p>
      */
     @BeforeEach
+    @SuppressWarnings("resource")
     void setUpQualiStrataUiSession() {
         currentTestSession.set(runtime().newTestSession());
         currentManagedResources.set(new ManagedTestResources());
@@ -181,6 +182,7 @@ public abstract class AbstractQualiStrataJunitUiTest {
      *
      * @return primary UI session/page for the current test method.
      */
+    @SuppressWarnings("resource")
     protected UiSession session() {
         return testSession().session();
     }
