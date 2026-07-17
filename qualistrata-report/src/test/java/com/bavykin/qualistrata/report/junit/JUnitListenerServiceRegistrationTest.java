@@ -10,12 +10,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class JUnitListenerServiceRegistrationTest {
 
     @Test
-    void registersListenerThroughJUnitPlatformServiceLoader() {
+    void registersJsonReportListenerThroughJUnitPlatformServiceLoader() {
         boolean registered = ServiceLoader
                 .load(TestExecutionListener.class)
                 .stream()
                 .map(ServiceLoader.Provider::type)
-                .anyMatch(JUnitTestRunListener.class::equals);
+                .anyMatch(JUnitJsonReportListener.class::equals);
 
         assertTrue(registered);
     }
