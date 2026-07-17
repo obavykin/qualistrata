@@ -1,6 +1,7 @@
 package com.bavykin.qualistrata.report.junit;
 
 import com.bavykin.qualistrata.report.model.TestRun;
+import com.bavykin.qualistrata.report.writer.HtmlTestRunWriter;
 import com.bavykin.qualistrata.report.writer.JsonTestRunWriter;
 import org.junit.platform.engine.TestExecutionResult;
 import org.junit.platform.launcher.TestExecutionListener;
@@ -27,6 +28,7 @@ public final class JUnitJsonReportListener
     private final JUnitTestRunListener delegate;
     private final JUnitTestRunAssembler assembler;
     private final JsonTestRunWriter writer;
+    private final HtmlTestRunWriter htmlWriter;
     private final JUnitReportConfiguration configuration;
     private final Clock clock;
     private final AtomicReference<Instant> startedAt =
@@ -56,6 +58,7 @@ public final class JUnitJsonReportListener
                 "configuration"
         );
         this.writer = Objects.requireNonNull(writer, "writer");
+        this.htmlWriter = new HtmlTestRunWriter(writer);
         this.clock = Objects.requireNonNull(clock, "clock");
         this.assembler = new JUnitTestRunAssembler(delegate);
     }
@@ -101,6 +104,10 @@ public final class JUnitJsonReportListener
                 finishedAt
         );
         writer.write(testRun, configuration.outputPath());
+        htmlWriter.write(
+                testRun,
+                HtmlTestRunWriter.siblingPath(configuration.outputPath())
+        );
     }
 
     /**
