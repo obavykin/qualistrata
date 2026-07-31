@@ -26,6 +26,8 @@ final class PlaywrightDownloadSupport implements DownloadSupport {
 
     private final Page page;
     private final Duration defaultTimeout;
+    private static final Duration RESOURCE_RETRY_INTERVAL = Duration.ofMillis(100);
+    private static final int RESOURCE_NOT_READY_STATUS = 404;
     private static final Pattern CONTENT_DISPOSITION_FILENAME = Pattern.compile(
             "(?i)(?:^|;)\\s*filename\\s*=\\s*\"?([^;\"]+)\"?"
     );
@@ -59,13 +61,7 @@ final class PlaywrightDownloadSupport implements DownloadSupport {
         }
 
         URI resolvedUri = URI.create(page.url()).resolve(url);
-        APIResponse response = page.context().request().get(resolvedUri.toString());
-        if (!response.ok()) {
-            throw new IllegalStateException(
-                    "Unable to download resource from '" + resolvedUri
-                            + "'. HTTP status: " + response.status() + "."
-            );
-        }
+        APIResponse response = awaitDownloadResource(resolvedUri);
 
         String suggestedFileName = resolveFileName(
                 resolvedUri,
@@ -85,6 +81,63 @@ final class PlaywrightDownloadSupport implements DownloadSupport {
         } finally {
             response.dispose();
         }
+    }
+
+    /**
+     * Polls a generated resource until it becomes available or the configured
+     * download timeout expires.
+     *
+     * <p>TNT-style report exports can publish the target URL before the backing
+     * file is visible to the HTTP endpoint. HTTP 404 is therefore treated as a
+     * transient not-ready state; all other unsuccessful statuses fail
+     * immediately.</p>
+     */
+    private APIResponse awaitDownloadResource(URI resolvedUri) {
+        long deadline = System.nanoTime() + defaultTimeout.toNanos();
+        int lastStatus = RESOURCE_NOT_READY_STATUS;
+
+        while (true) {
+            APIResponse response = page.context().request().get(resolvedUri.toString());
+            if (response.ok()) {
+                return response;
+            }
+
+            lastStatus = response.status();
+            response.dispose();
+
+            if (lastStatus != RESOURCE_NOT_READY_STATUS) {
+                throw downloadFailure(resolvedUri, lastStatus);
+            }
+            if (System.nanoTime() >= deadline) {
+                throw new IllegalStateException(
+                        "Timed out waiting for download resource '" + resolvedUri
+                                + "' to become available. Last HTTP status: "
+                                + lastStatus + "."
+                );
+            }
+
+            pauseBeforeResourceRetry(resolvedUri);
+        }
+    }
+
+    private static void pauseBeforeResourceRetry(URI resolvedUri) {
+        try {
+            Thread.sleep(RESOURCE_RETRY_INTERVAL.toMillis());
+        } catch (InterruptedException interrupted) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException(
+                    "Interrupted while waiting for download resource '"
+                            + resolvedUri + "' to become available.",
+                    interrupted
+            );
+        }
+    }
+
+    private static IllegalStateException downloadFailure(URI resolvedUri, int status) {
+        return new IllegalStateException(
+                "Unable to download resource from '" + resolvedUri
+                        + "'. HTTP status: " + status + "."
+        );
     }
 
     private static String resolveFileName(URI uri, Map<String, String> headers) {
