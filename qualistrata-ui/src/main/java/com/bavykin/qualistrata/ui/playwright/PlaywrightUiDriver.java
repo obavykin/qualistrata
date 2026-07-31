@@ -31,7 +31,8 @@ public final class PlaywrightUiDriver implements UiDriver {
 
     @Override
     public UiBrowserContext newContext() {
-        Browser.NewContextOptions options = new Browser.NewContextOptions();
+        Browser.NewContextOptions options = new Browser.NewContextOptions()
+                .setIgnoreHTTPSErrors(true);
         return new PlaywrightBrowserContext(browser.newContext(options), config, capabilities());
     }
 
