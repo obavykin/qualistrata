@@ -4,9 +4,7 @@ import com.bavykin.qualistrata.ui.config.UiRuntimeConfig;
 import com.bavykin.qualistrata.ui.driver.UiSession;
 import com.bavykin.qualistrata.ui.fixture.UiTestRuntime;
 import com.bavykin.qualistrata.ui.fixture.UiTestSession;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -14,10 +12,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 /**
  * Optional JUnit 5 base class for consumer UI tests.
  *
- * <p>The base class provides the same lifecycle pattern as the TestNG fixture:
- * one heavy UI runtime per test class and one isolated browser context/session
- * per test method. Product authentication and business page objects remain in
- * consumer projects.</p>
+ * <p>Each test method owns its own UI runtime, browser, context and session.
+ * This keeps Playwright objects confined to the JUnit execution thread that
+ * created them and allows methods from the same test class to run concurrently
+ * without sharing a Playwright transport. Product authentication and business
+ * page objects remain in consumer projects.</p>
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @ExtendWith(QualiStrataJunitUiExtension.class)
@@ -29,7 +28,7 @@ public abstract class AbstractQualiStrataJunitUiTest {
     public AbstractQualiStrataJunitUiTest() {
     }
 
-    private UiTestRuntime runtime;
+    private final ThreadLocal<UiTestRuntime> currentRuntime = new ThreadLocal<>();
     private final ThreadLocal<UiTestSession> currentTestSession = new ThreadLocal<>();
     private final ThreadLocal<ManagedTestResources> currentManagedResources = new ThreadLocal<>();
 
@@ -40,25 +39,28 @@ public abstract class AbstractQualiStrataJunitUiTest {
      */
     protected abstract UiRuntimeConfig uiRuntimeConfig();
 
-    /** Creates the heavy browser runtime once for this JUnit class instance. */
-    @BeforeAll
-    void setUpQualiStrataUiRuntime() {
-        runtime = UiTestRuntime.create(uiRuntimeConfig());
-    }
-
     /**
-     * Creates a fresh isolated context/session and managed-resource registry for
-     * the next test method.
+     * Creates a thread-confined runtime, browser context/session and managed-resource
+     * registry for the next test method.
      *
-     * <p>The registry is created before consumer test code executes, so any
+     * <p>Playwright Java objects are not shared between concurrent JUnit methods.
+     * The runtime is created and closed on the same execution thread as the test.
+     * The registry is created before consumer test code executes, so any
      * {@link AutoCloseable} returned by a page flow may be registered through
      * {@link #manage(AutoCloseable)} immediately after it is opened.</p>
      */
     @BeforeEach
-    @SuppressWarnings("resource")
     void setUpQualiStrataUiSession() {
-        currentTestSession.set(runtime().newTestSession());
-        currentManagedResources.set(new ManagedTestResources());
+        UiTestRuntime runtime = UiTestRuntime.create(uiRuntimeConfig());
+        try {
+            currentRuntime.set(runtime);
+            currentTestSession.set(runtime.newTestSession());
+            currentManagedResources.set(new ManagedTestResources());
+        } catch (RuntimeException | Error failure) {
+            currentRuntime.remove();
+            runtime.close();
+            throw failure;
+        }
     }
 
     /**
@@ -71,16 +73,19 @@ public abstract class AbstractQualiStrataJunitUiTest {
      * context. Cleanup continues after an individual close failure; subsequent
      * failures are attached as suppressed exceptions to the first failure.</p>
      *
-     * <p>The thread-local state is removed before cleanup starts. A failing
-     * resource therefore cannot leak lifecycle state into a later test method.</p>
+     * <p>The browser runtime is closed last and on the same JUnit execution thread
+     * that created it. Thread-local state is removed before cleanup starts, so a
+     * failing resource cannot leak lifecycle state into a later test method.</p>
      */
     @AfterEach
     void tearDownQualiStrataUiSession() {
         ManagedTestResources managedResources = currentManagedResources.get();
         UiTestSession testSession = currentTestSession.get();
+        UiTestRuntime runtime = currentRuntime.get();
 
         currentManagedResources.remove();
         currentTestSession.remove();
+        currentRuntime.remove();
 
         RuntimeException cleanupFailure = null;
 
@@ -104,20 +109,22 @@ public abstract class AbstractQualiStrataJunitUiTest {
             }
         }
 
+        if (runtime != null) {
+            try {
+                runtime.close();
+            } catch (RuntimeException failure) {
+                if (cleanupFailure == null) {
+                    cleanupFailure = failure;
+                } else {
+                    cleanupFailure.addSuppressed(failure);
+                }
+            }
+        }
+
         if (cleanupFailure != null) {
             throw cleanupFailure;
         }
     }
-
-    /** Closes the heavy browser runtime after all methods in this class. */
-    @AfterAll
-    void tearDownQualiStrataUiRuntime() {
-        if (runtime != null) {
-            runtime.close();
-            runtime = null;
-        }
-    }
-
 
     /**
      * Registers a test-owned resource for automatic cleanup after the current
@@ -153,13 +160,16 @@ public abstract class AbstractQualiStrataJunitUiTest {
     }
 
     /**
-     * Returns the active UI runtime.
+     * Returns the active thread-confined UI runtime.
      *
      * @return active runtime for advanced consumer fixture code.
      */
     protected UiTestRuntime runtime() {
+        UiTestRuntime runtime = currentRuntime.get();
         if (runtime == null) {
-            throw new IllegalStateException("QualiStrata UI runtime has not been initialised yet.");
+            throw new IllegalStateException(
+                    "QualiStrata UI runtime has not been initialised for the current test method."
+            );
         }
         return runtime;
     }
