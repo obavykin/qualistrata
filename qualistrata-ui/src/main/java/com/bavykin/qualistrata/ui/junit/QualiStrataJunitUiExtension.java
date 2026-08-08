@@ -14,8 +14,10 @@ import com.bavykin.qualistrata.ui.reporting.UiStepReport;
 import com.bavykin.qualistrata.ui.reporting.UiTestReport;
 import com.bavykin.qualistrata.ui.reporting.UiTestStatus;
 import org.junit.jupiter.api.extension.AfterAllCallback;
+import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.AfterTestExecutionCallback;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
+import org.junit.jupiter.api.extension.BeforeEachCallback;
 import org.junit.jupiter.api.extension.BeforeTestExecutionCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.TestWatcher;
@@ -39,8 +41,9 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * sessions registered in {@link UiSessionRegistry}, collects diagnostics on
  * failure, closes leaked sessions, and writes an aggregated local UI report.</p>
  */
-public class QualiStrataJunitUiExtension implements BeforeAllCallback, BeforeTestExecutionCallback,
-        AfterTestExecutionCallback, AfterAllCallback, TestWatcher {
+public class QualiStrataJunitUiExtension implements BeforeAllCallback, BeforeEachCallback,
+        BeforeTestExecutionCallback, AfterTestExecutionCallback, AfterEachCallback,
+        AfterAllCallback, TestWatcher {
 
     /** Runtime property that controls the UI report output directory. */
     public static final String REPORT_DIRECTORY_PROPERTY = "ui.report.dir";
@@ -51,9 +54,12 @@ public class QualiStrataJunitUiExtension implements BeforeAllCallback, BeforeTes
     private static final ExtensionContext.Namespace NAMESPACE = ExtensionContext.Namespace.create(
             QualiStrataJunitUiExtension.class
     );
+    private static final UiJunitResourceLockRegistry RESOURCE_LOCKS =
+            new UiJunitResourceLockRegistry();
 
     private final List<UiTestReport> tests = new CopyOnWriteArrayList<>();
     private final UiJunitMutationClassifier mutationClassifier = new UiJunitMutationClassifier();
+    private final UiJunitResourceLockResolver resourceLockResolver = new UiJunitResourceLockResolver();
     private final UiJunitMutationClassificationValidator mutationValidator;
     private final Properties properties;
     private final Path reportDirectory;
@@ -114,6 +120,21 @@ public class QualiStrataJunitUiExtension implements BeforeAllCallback, BeforeTes
     }
 
     @Override
+    public void beforeEach(ExtensionContext context) {
+        Method method = context.getRequiredTestMethod();
+        UiJunitMutationType mutationType = mutationClassifier.classify(method, context.getTags());
+        boolean exclusiveEnvironment = mutationType == UiJunitMutationType.EXCLUSIVE;
+
+        List<UiJunitResourceLockRegistry.Request> requests = resourceLockResolver.resolve(
+                method,
+                value("target", ""),
+                exclusiveEnvironment
+        );
+        UiJunitResourceLockRegistry.Handle handle = RESOURCE_LOCKS.acquire(requests);
+        context.getStore(NAMESPACE).put(resourceLockKey(context), handle);
+    }
+
+    @Override
     public void beforeTestExecution(ExtensionContext context) {
         Instant start = Instant.now();
         context.getStore(NAMESPACE).put(startKey(context), start);
@@ -134,6 +155,15 @@ public class QualiStrataJunitUiExtension implements BeforeAllCallback, BeforeTes
         UiTestStatus status = failure == null ? UiTestStatus.PASSED : statusFor(failure);
         Instant start = context.getStore(NAMESPACE).remove(startKey(context), Instant.class);
         record(context, status, start == null ? Instant.now() : start, failure);
+    }
+
+    @Override
+    public void afterEach(ExtensionContext context) {
+        UiJunitResourceLockRegistry.Handle handle = context.getStore(NAMESPACE)
+                .remove(resourceLockKey(context), UiJunitResourceLockRegistry.Handle.class);
+        if (handle != null) {
+            handle.close();
+        }
     }
 
     @Override
@@ -235,6 +265,10 @@ public class QualiStrataJunitUiExtension implements BeforeAllCallback, BeforeTes
 
     private String startKey(ExtensionContext context) {
         return context.getUniqueId() + ":start";
+    }
+
+    private String resourceLockKey(ExtensionContext context) {
+        return context.getUniqueId() + ":shared-resource-locks";
     }
 
     private String summarize(Throwable throwable) {
