@@ -7,6 +7,10 @@ import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.Session;
 import org.junit.jupiter.api.Test;
 
+import java.io.ByteArrayOutputStream;
+import java.nio.charset.StandardCharsets;
+
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -18,6 +22,27 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
  * tests.</p>
  */
 class JschSshConnectionTest {
+
+    @Test
+    void shouldTerminateInteractiveResponsesWithUnixLineFeed() {
+        assertArrayEquals(
+                "secret\n".getBytes(StandardCharsets.UTF_8),
+                JschSshConnection.encodeInteractiveResponse("secret")
+        );
+    }
+
+    @Test
+    void shouldBuildInteractiveTranscriptFromStdoutAndStderr() {
+        ByteArrayOutputStream stdout = new ByteArrayOutputStream();
+        ByteArrayOutputStream stderr = new ByteArrayOutputStream();
+        stdout.writeBytes("stdout-prompt".getBytes(StandardCharsets.UTF_8));
+        stderr.writeBytes("stderr-prompt".getBytes(StandardCharsets.UTF_8));
+
+        assertEquals(
+                "stdout-prompt\nstderr-prompt",
+                JschSshConnection.buildInteractiveTranscript(stdout, stderr)
+        );
+    }
 
     @Test
     void shouldFailWhenSessionIsNull() {
