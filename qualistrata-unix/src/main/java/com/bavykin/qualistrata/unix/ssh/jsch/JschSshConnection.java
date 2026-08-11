@@ -339,6 +339,8 @@ public class JschSshConnection implements InteractiveSshConnection {
                 ? Long.MAX_VALUE
                 : System.nanoTime() + script.timeout().toNanos();
 
+        boolean stdinClosed = false;
+
         while (!channel.isClosed()) {
             drainAvailableOutput(stdoutStream, stdout);
             drainAvailableOutput(stderrStream, stderr);
@@ -348,6 +350,12 @@ public class JschSshConnection implements InteractiveSshConnection {
                     script.promptResponses(),
                     matchedPromptPatterns,
                     answeredPromptIndexes
+            );
+            stdinClosed = closeInteractiveInputIfComplete(
+                    stdinStream,
+                    script.promptResponses().size(),
+                    answeredPromptIndexes,
+                    stdinClosed
             );
 
             if (System.nanoTime() > deadline) {
@@ -380,6 +388,28 @@ public class JschSshConnection implements InteractiveSshConnection {
         return stdout.toString(StandardCharsets.UTF_8)
                 + "\n"
                 + stderr.toString(StandardCharsets.UTF_8);
+    }
+
+    /**
+     * Sends EOF to the remote command after every configured prompt response was delivered.
+     *
+     * <p>Closing the JSch channel input stream sends SSH EOF without closing the output streams,
+     * allowing the remote command to finish while QualiStrata continues draining stdout/stderr.</p>
+     */
+    static boolean closeInteractiveInputIfComplete(
+            OutputStream stdinStream,
+            int promptResponseCount,
+            Set<Integer> answeredPromptIndexes,
+            boolean stdinClosed
+    ) throws IOException {
+        if (stdinClosed
+                || promptResponseCount == 0
+                || answeredPromptIndexes.size() != promptResponseCount) {
+            return stdinClosed;
+        }
+
+        stdinStream.close();
+        return true;
     }
 
     /**
