@@ -160,25 +160,28 @@ public class JschSshConnection implements InteractiveSshConnection {
 
         try {
             InputStream stdoutStream = channel.getInputStream();
+            InputStream stderrStream = channel.getErrStream();
             OutputStream stdinStream = channel.getOutputStream();
             ByteArrayOutputStream stdout = new ByteArrayOutputStream();
             ByteArrayOutputStream stderr = new ByteArrayOutputStream();
             List<String> matchedPromptPatterns = new ArrayList<>();
             Set<Integer> answeredPromptIndexes = new HashSet<>();
 
-            channel.setErrStream(stderr);
             channel.connect(resolveChannelConnectTimeoutMillis(script.timeout()));
 
             waitForInteractiveCompletion(
                     channel,
                     stdoutStream,
+                    stderrStream,
                     stdinStream,
                     stdout,
+                    stderr,
                     script,
                     matchedPromptPatterns,
                     answeredPromptIndexes
             );
             drainAvailableOutput(stdoutStream, stdout);
+            drainAvailableOutput(stderrStream, stderr);
 
             return new InteractiveCommandResult(
                     channel.getExitStatus(),
@@ -324,8 +327,10 @@ public class JschSshConnection implements InteractiveSshConnection {
     private void waitForInteractiveCompletion(
             ChannelExec channel,
             InputStream stdoutStream,
+            InputStream stderrStream,
             OutputStream stdinStream,
             ByteArrayOutputStream stdout,
+            ByteArrayOutputStream stderr,
             InteractiveCommandScript script,
             List<String> matchedPromptPatterns,
             Set<Integer> answeredPromptIndexes
@@ -334,24 +339,77 @@ public class JschSshConnection implements InteractiveSshConnection {
                 ? Long.MAX_VALUE
                 : System.nanoTime() + script.timeout().toNanos();
 
+        boolean stdinClosed = false;
+
         while (!channel.isClosed()) {
             drainAvailableOutput(stdoutStream, stdout);
+            drainAvailableOutput(stderrStream, stderr);
             answerMatchedPrompts(
                     stdinStream,
-                    stdout.toString(StandardCharsets.UTF_8),
+                    buildInteractiveTranscript(stdout, stderr),
                     script.promptResponses(),
                     matchedPromptPatterns,
                     answeredPromptIndexes
+            );
+            stdinClosed = closeInteractiveInputIfComplete(
+                    stdinStream,
+                    script.promptResponses().size(),
+                    answeredPromptIndexes,
+                    stdinClosed
             );
 
             if (System.nanoTime() > deadline) {
                 channel.disconnect();
 
-                throw new InteractiveCommandException("Interactive SSH command timed out after: " + script.timeout());
+                throw new InteractiveCommandException(
+                        "Interactive SSH command timed out after: " + script.timeout()
+                                + ". stdoutBytes=" + stdout.size()
+                                + ", stderrBytes=" + stderr.size()
+                                + ", matchedPrompts=" + matchedPromptPatterns.size()
+                                + "/" + script.promptResponses().size()
+                                + ", matchedPromptPatterns=" + matchedPromptPatterns
+                );
             }
 
             sleepBeforeNextPoll();
         }
+    }
+
+    /**
+     * Builds the prompt-matching transcript from both SSH output streams.
+     *
+     * <p>Interactive programs may emit prompts to stdout or stderr. Secret response values are
+     * never appended to either buffer by QualiStrata.</p>
+     */
+    static String buildInteractiveTranscript(
+            ByteArrayOutputStream stdout,
+            ByteArrayOutputStream stderr
+    ) {
+        return stdout.toString(StandardCharsets.UTF_8)
+                + "\n"
+                + stderr.toString(StandardCharsets.UTF_8);
+    }
+
+    /**
+     * Sends EOF to the remote command after every configured prompt response was delivered.
+     *
+     * <p>Closing the JSch channel input stream sends SSH EOF without closing the output streams,
+     * allowing the remote command to finish while QualiStrata continues draining stdout/stderr.</p>
+     */
+    static boolean closeInteractiveInputIfComplete(
+            OutputStream stdinStream,
+            int promptResponseCount,
+            Set<Integer> answeredPromptIndexes,
+            boolean stdinClosed
+    ) throws IOException {
+        if (stdinClosed
+                || promptResponseCount == 0
+                || answeredPromptIndexes.size() != promptResponseCount) {
+            return stdinClosed;
+        }
+
+        stdinStream.close();
+        return true;
     }
 
     /**
@@ -379,12 +437,21 @@ public class JschSshConnection implements InteractiveSshConnection {
             InteractivePromptResponse response = promptResponses.get(index);
 
             if (Pattern.compile(response.promptPattern(), Pattern.DOTALL).matcher(transcript).find()) {
-                stdinStream.write((response.response() + System.lineSeparator()).getBytes(StandardCharsets.UTF_8));
+                stdinStream.write(encodeInteractiveResponse(response.response()));
                 stdinStream.flush();
                 answeredPromptIndexes.add(index);
                 matchedPromptPatterns.add(response.promptPattern());
             }
         }
+    }
+
+    /**
+     * Encodes an interactive response for a remote Unix PTY.
+     *
+     * <p>SSH interactive input uses LF regardless of the operating system running the client.</p>
+     */
+    static byte[] encodeInteractiveResponse(String response) {
+        return (response + "\n").getBytes(StandardCharsets.UTF_8);
     }
 
     /**

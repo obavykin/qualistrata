@@ -16,7 +16,11 @@ public interface UiDriver extends AutoCloseable {
      */
     UiBrowserContext newContext();
 
-    /** @return capabilities of this driver implementation. */
+    /**
+     * Returns capabilities of this driver implementation.
+     *
+     * @return driver capabilities.
+     */
     UiCapabilities capabilities();
 
     /** Closes engine resources. */

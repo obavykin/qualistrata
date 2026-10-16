@@ -4,8 +4,11 @@ package com.bavykin.qualistrata.ui.config;
  * Trace collection policy used by artifact collection integrations.
  */
 public enum UiTraceMode {
+    /** Trace collection is disabled. */
     OFF,
+    /** Trace is retained only when the test fails. */
     ON_FAILURE,
+    /** Trace is retained for every test. */
     ALWAYS;
 
     /**

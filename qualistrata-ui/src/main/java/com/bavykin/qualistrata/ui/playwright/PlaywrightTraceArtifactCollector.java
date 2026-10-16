@@ -23,7 +23,11 @@ public final class PlaywrightTraceArtifactCollector implements UiArtifactCollect
 
     private final Path outputDirectory;
 
-    /** Creates collector. */
+    /**
+     * Creates collector.
+     *
+     * @param outputDirectory directory where trace artifacts are written.
+     */
     public PlaywrightTraceArtifactCollector(Path outputDirectory) {
         this.outputDirectory = outputDirectory;
     }

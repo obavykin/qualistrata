@@ -11,6 +11,12 @@ import java.nio.file.Path;
  */
 public final class HtmlUiReportWriter implements UiReportWriter {
 
+    /**
+     * Creates an HTML UI report writer.
+     */
+    public HtmlUiReportWriter() {
+    }
+
     @Override
     public void write(UiRunReport report, Path outputDirectory) {
         try {

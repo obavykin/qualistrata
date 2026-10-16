@@ -19,12 +19,20 @@ public record UiMutationClassification(
         sources = sources == null ? List.of() : List.copyOf(sources);
     }
 
-    /** @return whether the test has no mutation metadata. */
+    /**
+     * Returns whether the test has no mutation metadata.
+     *
+     * @return whether the test has no mutation metadata.
+     */
     public boolean unclassified() {
         return type == null;
     }
 
-    /** @return mutation type name or {@code null} for JSON/report compatibility. */
+    /**
+     * Provides the typeName operation.
+     *
+     * @return mutation type name or {@code null} for JSON/report compatibility.
+     */
     public String typeName() {
         return type == null ? null : type.name();
     }

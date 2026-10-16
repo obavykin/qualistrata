@@ -5,7 +5,11 @@ package com.bavykin.qualistrata.ui.testng;
  */
 public class UiMutationValidationException extends RuntimeException {
 
-    /** Creates exception with message. */
+    /**
+     * Creates exception with message.
+     *
+     * @param message message value.
+     */
     public UiMutationValidationException(String message) {
         super(message);
     }

@@ -25,12 +25,20 @@ public class DataTableComponent extends BaseComponent {
         super(session, root);
     }
 
-    /** @return visible header texts found via generic {@code th} selector. */
+    /**
+     * Returns visible header texts found via the generic {@code th} selector.
+     *
+     * @return visible header texts.
+     */
     public List<String> headers() {
         return session.elements(UiLocator.css("th")).texts();
     }
 
-    /** @return visible row count found via generic {@code tbody tr} selector. */
+    /**
+     * Returns the visible row count found via the generic {@code tbody tr} selector.
+     *
+     * @return visible row count.
+     */
     public int rowCount() {
         return session.elements(UiLocator.css("tbody tr")).count();
     }
@@ -49,7 +57,11 @@ public class DataTableComponent extends BaseComponent {
         }
     }
 
-    /** @return collection of generic body rows. */
+    /**
+     * Returns the generic table body rows.
+     *
+     * @return collection of generic body rows.
+     */
     public UiElementCollection rows() {
         return session.elements(UiLocator.css("tbody tr"));
     }

@@ -5,17 +5,38 @@ package com.bavykin.qualistrata.ui.testng;
  */
 public final class UiParallelExecutionPolicy {
 
-    /** @return whether tests with given classification may run in parallel. */
+    /**
+     * Creates a UI parallel-execution policy.
+     */
+    public UiParallelExecutionPolicy() {
+    }
+
+    /**
+     * Checks whether the classification may run in parallel.
+     *
+     * @param mutationType mutation classification to evaluate.
+     * @return whether tests with the given classification may run in parallel.
+     */
     public boolean mayRunInParallel(UiMutationType mutationType) {
         return mutationType == UiMutationType.NON_MUTATING;
     }
 
-    /** @return whether tests with given classification require sequential run. */
+    /**
+     * Checks whether the classification requires sequential execution.
+     *
+     * @param mutationType mutation classification to evaluate.
+     * @return whether tests with the given classification require sequential execution.
+     */
     public boolean requiresSequentialRun(UiMutationType mutationType) {
         return mutationType == UiMutationType.MUTATING || mutationType == UiMutationType.EXCLUSIVE;
     }
 
-    /** @return conventional TestNG group for the mutation type. */
+    /**
+     * Returns the conventional TestNG group for the classification.
+     *
+     * @param mutationType mutation classification to map.
+     * @return conventional TestNG group for the mutation type.
+     */
     public String groupFor(UiMutationType mutationType) {
         if (mutationType == null) {
             return null;

@@ -10,6 +10,12 @@ import java.util.regex.PatternSyntaxException;
 public class InteractiveCommandScriptValidator {
 
     /**
+     * Creates an interactive command script validator.
+     */
+    public InteractiveCommandScriptValidator() {
+    }
+
+    /**
      * Validates an interactive command script.
      *
      * @param script script to validate.

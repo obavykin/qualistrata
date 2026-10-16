@@ -34,22 +34,38 @@ public record UiRunReport(
         tests = tests == null ? List.of() : List.copyOf(tests);
     }
 
-    /** @return total test count. */
+    /**
+     * Provides the totalTests operation.
+     *
+     * @return total test count.
+     */
     public long totalTests() {
         return tests.size();
     }
 
-    /** @return passed test count. */
+    /**
+     * Provides the passed operation.
+     *
+     * @return passed test count.
+     */
     public long passed() {
         return tests.stream().filter(test -> test.status() == UiTestStatus.PASSED).count();
     }
 
-    /** @return failed test count. */
+    /**
+     * Provides the failed operation.
+     *
+     * @return failed test count.
+     */
     public long failed() {
         return tests.stream().filter(test -> test.status() == UiTestStatus.FAILED).count();
     }
 
-    /** @return skipped test count. */
+    /**
+     * Provides the skipped operation.
+     *
+     * @return skipped test count.
+     */
     public long skipped() {
         return tests.stream().filter(test -> test.status() == UiTestStatus.SKIPPED).count();
     }

@@ -16,7 +16,11 @@ public final class CompositeUiArtifactCollector implements UiArtifactCollector {
 
     private final List<UiArtifactCollector> collectors;
 
-    /** Creates collector from ordered delegates. */
+    /**
+     * Creates collector from ordered delegates.
+     *
+     * @param collectors artifact collectors to invoke.
+     */
     public CompositeUiArtifactCollector(List<UiArtifactCollector> collectors) {
         this.collectors = collectors == null ? List.of() : List.copyOf(collectors);
     }

@@ -36,7 +36,11 @@ public final class UiSessionRegistry {
         return session;
     }
 
-    /** Removes a session from the current thread registry if it is present. */
+    /**
+     * Removes a session from the current thread registry if it is present.
+     *
+     * @param session session to unregister.
+     */
     public static void unregister(UiSession session) {
         if (session == null) {
             return;
@@ -49,13 +53,21 @@ public final class UiSessionRegistry {
         }
     }
 
-    /** @return the most recently created active session for this test thread. */
+    /**
+     * Provides the activeSession operation.
+     *
+     * @return the most recently created active session for this test thread.
+     */
     public static Optional<UiSession> activeSession() {
         Deque<UiSession> sessions = SESSIONS.get();
         return sessions.isEmpty() ? Optional.empty() : Optional.of(sessions.peek());
     }
 
-    /** @return snapshot of sessions currently registered for this test thread. */
+    /**
+     * Provides the currentThreadSessions operation.
+     *
+     * @return snapshot of sessions currently registered for this test thread.
+     */
     public static List<UiSession> currentThreadSessions() {
         return List.copyOf(SESSIONS.get());
     }

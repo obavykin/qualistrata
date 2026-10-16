@@ -14,6 +14,7 @@ import com.bavykin.qualistrata.ui.locator.UiLocator;
  */
 public abstract class BasePage {
 
+    /** Active UI session. */
     protected final UiSession session;
 
     /**
@@ -29,27 +30,49 @@ public abstract class BasePage {
         this.session = session;
     }
 
-    /** @return current page title. */
+    /**
+     * Returns the current page title.
+     *
+     * @return current page title.
+     */
     public String title() {
         return session.title();
     }
 
-    /** @return current page URL. */
+    /**
+     * Returns the current page URL.
+     *
+     * @return current page URL.
+     */
     public String url() {
         return session.url();
     }
 
-    /** Resolves single element. */
+    /**
+     * Resolves single element.
+     *
+     * @param locator driver-independent element locator.
+     * @return the resulting value.
+     */
     protected UiElement element(UiLocator locator) {
         return session.element(locator);
     }
 
-    /** Resolves element collection. */
+    /**
+     * Resolves element collection.
+     *
+     * @param locator driver-independent element locator.
+     * @return the resulting value.
+     */
     protected UiElementCollection elements(UiLocator locator) {
         return session.elements(locator);
     }
 
-    /** Fails when current title does not contain expected text. */
+    /**
+     * Fails when current title does not contain expected text.
+     *
+     * @param expectedText text expected to occur in the page title.
+     */
     protected void titleShouldContain(String expectedText) {
         if (expectedText == null || expectedText.isBlank()) {
             throw new IllegalArgumentException("Expected title text must not be blank.");

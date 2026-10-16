@@ -50,46 +50,95 @@ public final class ResolvedUnixHostConfig {
         this.keyPassphrase = keyPassphrase;
     }
 
-    /** @return Unix resource alias. */
+    /**
+     * Returns the resource alias.
+     *
+     * @return Unix resource alias.
+     */
     public String alias() { return alias; }
 
-    /** @return selected Unix access profile alias. */
+    /**
+     * Returns the selected access profile alias.
+     *
+     * @return selected Unix access profile alias.
+     */
     public String accessAlias() { return accessAlias; }
 
-    /** @return original non-secret Unix resource configuration. */
+    /**
+     * Returns the original non-secret resource configuration.
+     *
+     * @return original non-secret Unix resource configuration.
+     */
     public UnixResourceConfig resource() { return resource; }
 
-    /** @return Unix resource role, for example {@code application} or {@code database}. */
+    /**
+     * Returns the configured Unix resource role.
+     *
+     * @return Unix resource role, for example {@code application} or {@code database}.
+     */
     public String role() { return resource == null ? null : resource.role(); }
 
-    /** @return Unix host address. */
+    /**
+     * Returns the configured host.
+     *
+     * @return Unix host address.
+     */
     public String host() { return resource == null ? null : resource.host(); }
 
-    /** @return SSH port. */
+    /**
+     * Returns the configured port.
+     *
+     * @return SSH port.
+     */
     public Integer port() { return resource == null ? null : resource.port(); }
 
-    /** @return command timeout in seconds. */
+    /**
+     * Returns the command timeout.
+     *
+     * @return command timeout in seconds.
+     */
     public Integer commandTimeoutSeconds() { return resource == null ? null : resource.commandTimeoutSeconds(); }
 
     /**
-     * @return optional shell profile path or command for preparing the Unix shell environment
-     * before consumer command execution.
+     * Returns the optional shell profile used to prepare the Unix environment.
+     *
+     * @return optional shell profile path or command for preparing the Unix shell environment.
      */
     public String shellProfile() { return resource == null ? null : resource.shellProfile(); }
 
-    /** @return optional Unix session pool configuration. */
+    /**
+     * Returns the optional pool configuration.
+     *
+     * @return optional Unix session pool configuration.
+     */
     public UnixPoolConfig pool() { return resource == null ? null : resource.pool(); }
 
-    /** @return resolved Unix username. */
+    /**
+     * Returns the resolved username.
+     *
+     * @return resolved Unix username.
+     */
     public String username() { return username; }
 
-    /** @return resolved Unix password, or {@code null} when not configured. */
+    /**
+     * Returns the resolved password.
+     *
+     * @return resolved Unix password, or {@code null} when not configured.
+     */
     public SecretValue password() { return password; }
 
-    /** @return private key path, or {@code null} when not configured. */
+    /**
+     * Returns the private key path.
+     *
+     * @return private key path, or {@code null} when not configured.
+     */
     public String keyPath() { return keyPath; }
 
-    /** @return private key passphrase, or {@code null} when not configured. */
+    /**
+     * Returns the private key passphrase.
+     *
+     * @return private key passphrase, or {@code null} when not configured.
+     */
     public SecretValue keyPassphrase() { return keyPassphrase; }
 
     @Override

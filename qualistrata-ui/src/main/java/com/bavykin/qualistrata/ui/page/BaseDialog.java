@@ -12,11 +12,21 @@ import com.bavykin.qualistrata.ui.locator.UiLocator;
  */
 public abstract class BaseDialog extends BaseComponent {
 
+    /**
+     * Active UI session.
+     *
+     * @param session active UI session.
+     * @param root root locator of the component.
+     */
     protected BaseDialog(UiSession session, UiLocator root) {
         super(session, root);
     }
 
-    /** @return whether the dialog root is currently visible. */
+    /**
+     * Checks whether the dialog root is currently visible.
+     *
+     * @return whether the dialog root is currently visible.
+     */
     public boolean isOpen() {
         return root().isVisible();
     }

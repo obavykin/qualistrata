@@ -11,7 +11,12 @@ public enum UiJunitUnclassifiedTestPolicy {
     /** Fail fast when a UI test is not classified. */
     FAIL;
 
-    /** Parses policy from runtime property value. */
+    /**
+     * Parses policy from runtime property value.
+     *
+     * @param value value to enter or select.
+     * @return the resulting value.
+     */
     public static UiJunitUnclassifiedTestPolicy from(String value) {
         if (value == null || value.isBlank()) {
             return ALLOW;

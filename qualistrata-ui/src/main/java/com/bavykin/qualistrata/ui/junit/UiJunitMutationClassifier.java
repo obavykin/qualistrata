@@ -18,7 +18,19 @@ import java.util.Set;
  */
 public final class UiJunitMutationClassifier {
 
-    /** Resolves full mutation metadata for a JUnit test method. */
+    /**
+     * Creates a UiJunitMutationClassifier instance.
+     */
+    public UiJunitMutationClassifier() {
+    }
+
+    /**
+     * Resolves full mutation metadata for a JUnit test method.
+     *
+     * @param method method value.
+     * @param tags tags value.
+     * @return the resulting value.
+     */
     public UiJunitMutationClassification classification(Method method, Set<String> tags) {
         if (method == null) {
             throw new IllegalArgumentException("Test method must not be null.");
@@ -38,7 +50,13 @@ public final class UiJunitMutationClassifier {
         return new UiJunitMutationClassification(type, sources, found.size() > 1);
     }
 
-    /** Resolves only the final mutation type. */
+    /**
+     * Resolves only the final mutation type.
+     *
+     * @param method method value.
+     * @param tags tags value.
+     * @return the resulting value.
+     */
     public UiJunitMutationType classify(Method method, Set<String> tags) {
         return classification(method, tags).type();
     }

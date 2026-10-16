@@ -31,12 +31,23 @@ public final class UiTestRuntime implements AutoCloseable {
         this.driver = driver;
     }
 
-    /** Creates a runtime using the default engine-switching driver factory. */
+    /**
+     * Creates a runtime using the default engine-switching driver factory.
+     *
+     * @param config effective UI runtime configuration.
+     * @return the resulting value.
+     */
     public static UiTestRuntime create(UiRuntimeConfig config) {
         return create(config, new DefaultUiDriverFactory());
     }
 
-    /** Creates a runtime using an explicit driver factory, useful for tests. */
+    /**
+     * Creates a runtime using an explicit driver factory, useful for tests.
+     *
+     * @param config effective UI runtime configuration.
+     * @param driverFactory driver factory used to create the runtime.
+     * @return the resulting value.
+     */
     public static UiTestRuntime create(UiRuntimeConfig config, UiDriverFactory driverFactory) {
         if (config == null) {
             throw new IllegalArgumentException("UI runtime config must not be null.");
@@ -53,22 +64,41 @@ public final class UiTestRuntime implements AutoCloseable {
         return new UiTestRuntime(config, createdDriver);
     }
 
-    /** Creates a runtime from resolved core UI configuration and runtime overrides. */
+    /**
+     * Creates a runtime from resolved core UI configuration and runtime overrides.
+     *
+     * @param resolvedUiConfig resolved core UI configuration.
+     * @param properties runtime override properties.
+     * @return the resulting value.
+     */
     public static UiTestRuntime from(ResolvedUiConfig resolvedUiConfig, Properties properties) {
         return create(UiRuntimeConfigFactory.from(resolvedUiConfig, properties));
     }
 
-    /** Creates a runtime from resolved core UI configuration using current system properties. */
+    /**
+     * Creates a runtime from resolved core UI configuration using current system properties.
+     *
+     * @param resolvedUiConfig resolved core UI configuration.
+     * @return the resulting value.
+     */
     public static UiTestRuntime fromSystemProperties(ResolvedUiConfig resolvedUiConfig) {
         return from(resolvedUiConfig, System.getProperties());
     }
 
-    /** @return effective UI runtime configuration. */
+    /**
+     * Returns the effective UI runtime configuration.
+     *
+     * @return effective UI runtime configuration.
+     */
     public UiRuntimeConfig config() {
         return config;
     }
 
-    /** @return underlying driver for advanced consumer fixtures. */
+    /**
+     * Returns the underlying UI driver.
+     *
+     * @return underlying driver for advanced consumer fixtures.
+     */
     public UiDriver driver() {
         ensureOpen();
         return driver;

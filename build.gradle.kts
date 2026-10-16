@@ -12,7 +12,8 @@ val publishableProjectNames = setOf(
     "qualistrata-db",
     "qualistrata-unix",
     "qualistrata-ui",
-    "qualistrata-perf"
+    "qualistrata-perf",
+    "qualistrata-report"
 )
 
 val moduleDescriptions = mapOf(
@@ -20,7 +21,8 @@ val moduleDescriptions = mapOf(
     "qualistrata-db" to "Database automation support for QualiStrata, including JDBC client abstractions, diagnostics, and report dataset primitives.",
     "qualistrata-unix" to "Unix and SSH automation support for QualiStrata, including command execution, session lifecycle, and environment checks.",
     "qualistrata-ui" to "UI automation support for QualiStrata, including driver-independent page abstractions, locators, Playwright integration, and test framework adapters.",
-    "qualistrata-perf" to "Performance and telemetry support for QualiStrata, including lightweight timing, local telemetry artifacts, and safe telemetry publishing abstractions."
+    "qualistrata-perf" to "Performance and telemetry support for QualiStrata, including lightweight timing, local telemetry artifacts, and safe telemetry publishing abstractions.",
+    "qualistrata-report" to "Framework-neutral test execution reporting for QualiStrata consumers, including canonical JSON artifacts and JUnit Platform integration."
 )
 
 val qualistrataVersion = providers.gradleProperty("qualistrata.version")
@@ -165,6 +167,10 @@ subprojects {
 
             repositories {
                 maven {
+                    name = "CentralStaging"
+                    url = rootProject.layout.buildDirectory.dir("central-staging").get().asFile.toURI()
+                }
+                maven {
                     name = "QualiStrataLocal"
 
                     url = uri(
@@ -189,56 +195,56 @@ subprojects {
             val releaseSigningRequired = releasePublishRequested && !version.toString().endsWith("SNAPSHOT")
 
             /*
-             * Local Maven publication must stay simple for consumer validation:
-             * ./gradlew publishToMavenLocal -Pqualistrata.version=0.1.0-alpha.1
+             * Local Maven publication must stay simple for consumer validation.
+             * Remote release publication must be signed.
              *
-             * Remote release publication, however, must be signed. The actual
-             * Central Portal repository task will be added later, so this guard is
-             * based on the requested task names rather than a specific repository.
-             *
-             * Signing keys can be supplied either inline through signingKey /
-             * SIGNING_KEY or via a local file through signingKeyFile /
-             * SIGNING_KEY_FILE. The file-based option is easier to use on Windows
-             * because it avoids placing a multi-line private key into
-             * ~/.gradle/gradle.properties.
-             *
-             * Important: do not register signing tasks for publishToMavenLocal.
-             * Gradle attaches signature artifacts to Maven Local publications too,
-             * and that makes local consumer validation depend on GPG credentials.
+             * Supported signing modes:
+             * - signingMode=gpg      -> use local GPG installation/keyring
+             * - default/in-memory    -> use signingKey or signingKeyFile
              */
             isRequired = releaseSigningRequired
 
             if (releaseSigningRequired) {
-                val inlineSigningKey = providers.gradleProperty("signingKey")
-                    .orElse(providers.environmentVariable("SIGNING_KEY"))
-                    .orNull
-                val signingKeyFile = providers.gradleProperty("signingKeyFile")
-                    .orElse(providers.environmentVariable("SIGNING_KEY_FILE"))
-                    .orNull
-                val signingPassword = providers.gradleProperty("signingPassword")
-                    .orElse(providers.environmentVariable("SIGNING_PASSWORD"))
-                    .orNull
+                val signingMode = providers.gradleProperty("signingMode")
+                    .orElse(providers.environmentVariable("SIGNING_MODE"))
+                    .orElse("inMemory")
+                    .get()
 
-                val signingKeyFromFile = signingKeyFile
-                    ?.takeIf { it.isNotBlank() }
-                    ?.let { file(it) }
-                    ?.takeIf { it.isFile }
-                    ?.readText()
+                if (signingMode.equals("gpg", ignoreCase = true)) {
+                    useGpgCmd()
+                } else {
+                    val inlineSigningKey = providers.gradleProperty("signingKey")
+                        .orElse(providers.environmentVariable("SIGNING_KEY"))
+                        .orNull
+                    val signingKeyFile = providers.gradleProperty("signingKeyFile")
+                        .orElse(providers.environmentVariable("SIGNING_KEY_FILE"))
+                        .orNull
+                    val signingPassword = providers.gradleProperty("signingPassword")
+                        .orElse(providers.environmentVariable("SIGNING_PASSWORD"))
+                        .orNull
 
-                val signingKey = inlineSigningKey
-                    ?.takeIf { it.isNotBlank() }
-                    ?: signingKeyFromFile
+                    val signingKeyFromFile = signingKeyFile
+                        ?.takeIf { it.isNotBlank() }
+                        ?.let { file(it) }
+                        ?.takeIf { it.isFile }
+                        ?.readText()
 
-                val normalizedSigningKey = signingKey?.replace("\\n", "\n")
+                    val signingKey = inlineSigningKey
+                        ?.takeIf { it.isNotBlank() }
+                        ?: signingKeyFromFile
 
-                check(!normalizedSigningKey.isNullOrBlank()) {
-                    "Release publication requires signingKey or signingKeyFile."
+                    val normalizedSigningKey = signingKey?.replace("\\n", "\n")
+
+                    check(!normalizedSigningKey.isNullOrBlank()) {
+                        "Release publication requires signingKey or signingKeyFile."
+                    }
+                    check(!signingPassword.isNullOrBlank()) {
+                        "Release publication requires signingPassword."
+                    }
+
+                    useInMemoryPgpKeys(normalizedSigningKey, signingPassword)
                 }
-                check(!signingPassword.isNullOrBlank()) {
-                    "Release publication requires signingPassword."
-                }
 
-                useInMemoryPgpKeys(normalizedSigningKey, signingPassword)
                 sign(extensions.getByType(PublishingExtension::class).publications)
             }
         }

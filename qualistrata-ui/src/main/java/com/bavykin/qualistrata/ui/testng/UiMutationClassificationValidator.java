@@ -11,12 +11,21 @@ public final class UiMutationClassificationValidator {
     private final UiMutationClassifier classifier;
     private final UiUnclassifiedTestPolicy unclassifiedPolicy;
 
-    /** Creates validator with explicit policy. */
+    /**
+     * Creates validator with explicit policy.
+     *
+     * @param unclassifiedPolicy unclassifiedPolicy value.
+     */
     public UiMutationClassificationValidator(UiUnclassifiedTestPolicy unclassifiedPolicy) {
         this(new UiMutationClassifier(), unclassifiedPolicy);
     }
 
-    /** Creates validator with explicit collaborators. */
+    /**
+     * Creates validator with explicit collaborators.
+     *
+     * @param classifier classifier value.
+     * @param unclassifiedPolicy unclassifiedPolicy value.
+     */
     public UiMutationClassificationValidator(
             UiMutationClassifier classifier,
             UiUnclassifiedTestPolicy unclassifiedPolicy

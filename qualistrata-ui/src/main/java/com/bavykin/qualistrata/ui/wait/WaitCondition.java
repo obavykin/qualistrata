@@ -6,6 +6,10 @@ package com.bavykin.qualistrata.ui.wait;
 @FunctionalInterface
 public interface WaitCondition {
 
-    /** @return whether condition is satisfied. */
+    /**
+     * Provides the isSatisfied operation.
+     *
+     * @return whether condition is satisfied.
+     */
     boolean isSatisfied();
 }

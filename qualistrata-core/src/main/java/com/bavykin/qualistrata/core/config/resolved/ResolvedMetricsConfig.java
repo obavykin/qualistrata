@@ -37,37 +37,81 @@ public final class ResolvedMetricsConfig {
         this.token = token;
     }
 
-    /** @return metrics resource alias. */
+    /**
+     * Returns the resource alias.
+     *
+     * @return metrics resource alias.
+     */
     public String alias() { return alias; }
 
-    /** @return selected metrics access profile alias. */
+    /**
+     * Returns the selected access profile alias.
+     *
+     * @return selected metrics access profile alias.
+     */
     public String accessAlias() { return accessAlias; }
 
-    /** @return original non-secret metrics resource configuration. */
+    /**
+     * Returns the original non-secret resource configuration.
+     *
+     * @return original non-secret metrics resource configuration.
+     */
     public MetricsResourceConfig resource() { return resource; }
 
-    /** @return metrics backend type. */
+    /**
+     * Returns the configured resource type.
+     *
+     * @return metrics backend type.
+     */
     public String type() { return resource == null ? null : resource.type(); }
 
-    /** @return whether the metrics backend is enabled. */
+    /**
+     * Returns whether the backend is enabled.
+     *
+     * @return whether the metrics backend is enabled.
+     */
     public Boolean enabled() { return resource == null ? null : resource.enabled(); }
 
-    /** @return metrics backend URL. */
+    /**
+     * Returns the configured backend URL.
+     *
+     * @return metrics backend URL.
+     */
     public String url() { return resource == null ? null : resource.url(); }
 
-    /** @return metrics organization name. */
+    /**
+     * Returns the configured organization.
+     *
+     * @return metrics organization name.
+     */
     public String org() { return resource == null ? null : resource.org(); }
 
-    /** @return metrics bucket or database name. */
+    /**
+     * Returns the configured bucket or database name.
+     *
+     * @return metrics bucket or database name.
+     */
     public String bucket() { return resource == null ? null : resource.bucket(); }
 
-    /** @return resolved metrics username, or {@code null} when not configured. */
+    /**
+     * Returns the resolved username.
+     *
+     * @return resolved metrics username, or {@code null} when not configured.
+     */
     public String username() { return username; }
 
-    /** @return resolved metrics password, or {@code null} when not configured. */
+    /**
+     * Returns the resolved password.
+     *
+     * @return resolved metrics password, or {@code null} when not configured.
+     */
     public SecretValue password() { return password; }
 
-    /** @return resolved metrics token, or {@code null} when not configured. */
+    /**
+     * Returns the resolved token.
+     *
+     * @return resolved metrics token, or {@code null} when not configured.
+     */
     public SecretValue token() { return token; }
 
     @Override

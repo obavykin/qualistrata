@@ -22,6 +22,12 @@ import java.util.Map;
 public class LocalJsonTelemetryReportWriter {
 
     /**
+     * Creates a local JSON telemetry report writer.
+     */
+    public LocalJsonTelemetryReportWriter() {
+    }
+
+    /**
      * Writes report to the supplied path, creating parent directories when
      * needed.
      *

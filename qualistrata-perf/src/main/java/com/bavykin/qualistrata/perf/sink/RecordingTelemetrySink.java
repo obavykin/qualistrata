@@ -22,6 +22,12 @@ import java.util.List;
  */
 public class RecordingTelemetrySink implements TelemetrySink {
 
+    /**
+     * Creates an empty in-memory telemetry sink.
+     */
+    public RecordingTelemetrySink() {
+    }
+
     private final List<TelemetryEvent> events = new ArrayList<>();
 
     /**

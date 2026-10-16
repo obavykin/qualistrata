@@ -46,52 +46,116 @@ public final class ResolvedDatabaseConfig {
         this.token = token;
     }
 
-    /** @return database resource alias. */
+    /**
+     * Returns the resource alias.
+     *
+     * @return database resource alias.
+     */
     public String alias() { return alias; }
 
-    /** @return selected database access profile alias. */
+    /**
+     * Returns the selected access profile alias.
+     *
+     * @return selected database access profile alias.
+     */
     public String accessAlias() { return accessAlias; }
 
-    /** @return original non-secret database resource configuration. */
+    /**
+     * Returns the original non-secret resource configuration.
+     *
+     * @return original non-secret database resource configuration.
+     */
     public DatabaseResourceConfig resource() { return resource; }
 
-    /** @return database engine type, for example {@code oracle} or {@code postgresql}. */
+    /**
+     * Returns the configured resource type.
+     *
+     * @return database engine type, for example {@code oracle} or {@code postgresql}.
+     */
     public String type() { return resource == null ? null : resource.type(); }
 
-    /** @return database host when a host/port connection model is used. */
+    /**
+     * Returns the configured host.
+     *
+     * @return database host when a host/port connection model is used.
+     */
     public String host() { return resource == null ? null : resource.host(); }
 
-    /** @return database listener port when a host/port connection model is used. */
+    /**
+     * Returns the configured port.
+     *
+     * @return database listener port when a host/port connection model is used.
+     */
     public Integer port() { return resource == null ? null : resource.port(); }
 
-    /** @return logical database name, SID, or service name depending on provider mapping. */
+    /**
+     * Returns the databaseName.
+     *
+     * @return logical database name, SID, or service name depending on provider mapping.
+     */
     public String databaseName() { return resource == null ? null : resource.databaseName(); }
 
-    /** @return optional default schema. */
+    /**
+     * Returns the configured default schema.
+     *
+     * @return optional default schema.
+     */
     public String schema() { return resource == null ? null : resource.schema(); }
 
-    /** @return optional JDBC URL without credentials. */
+    /**
+     * Returns the configured JDBC URL.
+     *
+     * @return optional JDBC URL without credentials.
+     */
     public String jdbcUrl() { return resource == null ? null : resource.jdbcUrl(); }
 
-    /** @return provider-specific connection mode, for example {@code sid} or {@code service}. */
+    /**
+     * Returns the provider-specific connection mode.
+     *
+     * @return provider-specific connection mode, for example {@code sid} or {@code service}.
+     */
     public String connectionMode() { return resource == null ? null : resource.connectionMode(); }
 
-    /** @return connection timeout in seconds. */
+    /**
+     * Returns the connectionTimeoutSeconds.
+     *
+     * @return connection timeout in seconds.
+     */
     public Integer connectionTimeoutSeconds() { return resource == null ? null : resource.connectionTimeoutSeconds(); }
 
-    /** @return query timeout in seconds. */
+    /**
+     * Returns the query timeout.
+     *
+     * @return query timeout in seconds.
+     */
     public Integer queryTimeoutSeconds() { return resource == null ? null : resource.queryTimeoutSeconds(); }
 
-    /** @return optional database pool configuration. */
+    /**
+     * Returns the optional pool configuration.
+     *
+     * @return optional database pool configuration.
+     */
     public DatabasePoolConfig pool() { return resource == null ? null : resource.pool(); }
 
-    /** @return resolved database username. */
+    /**
+     * Returns the resolved username.
+     *
+     * @return resolved database username.
+     */
     public String username() { return username; }
 
-    /** @return resolved database password, or {@code null} when not configured. */
+    /**
+     * Returns the resolved password.
+     *
+     * @return resolved database password, or {@code null} when not configured.
+     */
     public SecretValue password() { return password; }
 
-    /** @return resolved database token, or {@code null} when not configured. */
+    /**
+     * Returns the resolved token.
+     *
+     * @return resolved database token, or {@code null} when not configured.
+     */
     public SecretValue token() { return token; }
 
     @Override

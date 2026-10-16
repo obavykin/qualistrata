@@ -23,7 +23,13 @@ public final class PlaywrightUiSession implements UiSession {
     private final WindowSupport windows;
     private final DownloadSupport downloads;
 
-    /** Creates a session around an existing Playwright page. */
+    /**
+     * Creates a session around an existing Playwright page.
+     *
+     * @param page native Playwright page.
+     * @param config effective UI runtime configuration.
+     * @param capabilities resolved browser capabilities.
+     */
     public PlaywrightUiSession(Page page, UiRuntimeConfig config, UiCapabilities capabilities) {
         this.page = page;
         this.config = config;
@@ -76,7 +82,11 @@ public final class PlaywrightUiSession implements UiSession {
         return capabilities;
     }
 
-    /** @return native Playwright page for adapter-specific framework extensions. */
+    /**
+     * Returns native Playwright page for adapter-specific framework extensions.
+     *
+     * @return native Playwright page for adapter-specific framework extensions.
+     */
     public Page nativePage() {
         return page;
     }

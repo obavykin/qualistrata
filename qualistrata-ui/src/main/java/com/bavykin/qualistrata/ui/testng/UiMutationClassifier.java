@@ -20,6 +20,12 @@ import java.util.Map;
 public final class UiMutationClassifier {
 
     /**
+     * Creates a UiMutationClassifier instance.
+     */
+    public UiMutationClassifier() {
+    }
+
+    /**
      * Resolves mutation type for method and declaring class.
      *
      * @param method test method.
